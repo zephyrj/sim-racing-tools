@@ -41,7 +41,7 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     engine.max_torque = (round(engine_data["PeakTorque"]), round(engine_data["PeakTorqueRPM"]))
     engine.inertia = jbeam_engine_data["Camso_Engine"]["mainEngine"]["inertia"]
     engine.min_rpm = round(engine_data["IdleSpeed"])
-    engine.max_rpm = round(engine_data["MaxRPM"])
+    engine.limiter = round(engine_data["MaxRPM"])
 
     # fuel use in l/h = (Max Power * Max RPM) / fuel density
     fuel_use_per_hour = (engine_data["PeakPower"] * engine_data["Econ"]) / 750
