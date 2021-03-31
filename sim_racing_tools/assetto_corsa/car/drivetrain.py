@@ -1,3 +1,4 @@
+import os
 from typing import List
 from sim_racing_tools.utils import IniObj
 
@@ -49,7 +50,7 @@ class Drivetrain(object):
             ini_data["CLUTCH"] = dict()
         ini_data["CLUTCH"]["MAX_TORQUE"] = self.clutch_max_torque
         self.gearbox.update_ini(ini_data)
-        self.gearbox.write_gear_files()
+        self.gearbox.write_gear_files(os.path.dirname(os.path.abspath(ini_data.filename)))
         self.differential.update_ini(ini_data)
         self.auto_clutch.update_ini(ini_data)
         self.autoblip.update_ini(ini_data)
@@ -65,7 +66,12 @@ class DriveType(object):
 
 class Gearbox(object):
     def __init__(self):
+        self.count: int = 0
+        self.reverse_gear: float = 0.0
         self.gears = dict()
+        self.default_gears = dict()
+        self.final_gears = list()
+        self.default_final_gear: float = 0.0
         ''' change up time in milliseconds '''
         self.change_up_time: int = 0
         ''' change down time in milliseconds '''
@@ -85,7 +91,14 @@ class Gearbox(object):
         self.inertia: float = 0.02
 
     def load_settings_from_ini(self, drivetrain_ini_data):
-        self._lookup_gear_data()
+        self.count = int(_extract_ini_primitive_value(drivetrain_ini_data["GEARS"]["COUNT"]))
+        self.reverse_gear = float(_extract_ini_primitive_value(drivetrain_ini_data["GEARS"]["GEAR_R"]))
+        self.default_final_gear = float(_extract_ini_primitive_value(drivetrain_ini_data["GEARS"]["FINAL"]))
+        for gear_num in range(1, self.count+1):
+            self.default_gears[gear_num] = \
+                float(_extract_ini_primitive_value(drivetrain_ini_data["GEARS"][f"GEAR_{gear_num}"]))
+        self._lookup_gear_data(drivetrain_ini_data)
+
         self.change_up_time = int(_extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["CHANGE_UP_TIME"]))
         self.change_dn_time = int(_extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["CHANGE_DN_TIME"]))
         self.auto_cutoff_time = int(_extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["AUTO_CUTOFF_TIME"]))
@@ -96,6 +109,14 @@ class Gearbox(object):
             self.inertia = float(_extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["INERTIA"]))
 
     def update_ini(self, ini_object):
+        if "GEARS" not in ini_object:
+            ini_object["GEARS"] = dict()
+        ini_object["GEARS"]["COUNT"] = self.count
+        ini_object["GEARS"]["GEAR_R"] = self.reverse_gear
+        ini_object["GEARS"]["FINAL"] = self.default_final_gear
+        for gear_num, gear_ratio in sorted(self.default_gears.items()):
+            ini_object["GEARS"][f"GEAR_{gear_num}"] = gear_ratio
+        self.write_gear_files(os.path.dirname(os.path.abspath(ini_object.filename)))
         if "GEARBOX" not in ini_object:
             ini_object["GEARBOX"] = dict()
         ini_object["GEARBOX"]["CHANGE_UP_TIME"] = self.change_up_time
@@ -105,28 +126,84 @@ class Gearbox(object):
         ini_object["GEARBOX"]["VALID_SHIFT_RPM_WINDOW"] = self.valid_shift_rpm_window
         ini_object["GEARBOX"]["CONTROLS_WINDOW_GAIN"] = self.controls_window_gain
 
-    def write_gear_files(self):
-        pass
+    def write_gear_files(self, output_dir):
+        setup_file = os.path.join(output_dir, "setup.ini")
+        setup_ini = IniObj(setup_file)
+        for gear_num, gear_list in sorted(self.gears.items()):
+            gear_rto_filepath = os.path.join(output_dir, f"{GEAR_LOOKUP[gear_num]}.rto")
+            with open(gear_rto_filepath, "w+") as f:
+                for gear in gear_list:
+                    f.write(f"{gear.name}|{gear.ratio}\n")
+            gear_setup_section_name = f"GEAR_{gear_num}"
+            if gear_setup_section_name not in setup_ini:
+                setup_ini[gear_setup_section_name] = dict()
+            setup_ini[gear_setup_section_name]["RATIOS"] = os.path.basename(gear_rto_filepath)
+        if self.final_gears:
+            with open(os.path.join(output_dir, "final.rto"), "w+") as f:
+                for gear in self.final_gears:
+                    f.write(f"{gear.name}|{gear.ratio}\n")
+            if "FINAL_GEAR_RATIO" not in setup_ini:
+                setup_ini["FINAL_GEAR_RATIO"] = dict()
+            setup_ini["FINAL_GEAR_RATIO"]["RATIOS"] = "final.rto"
+        setup_ini.write()
 
-    def _lookup_gear_data(self):
-        pass
+    def _lookup_gear_data(self, ini_object):
+        lookup_path = os.path.dirname(os.path.abspath(ini_object.filename))
+        setup_file = os.path.join(lookup_path, "setup.ini")
+        if not os.path.exists(setup_file):
+            return
+        ratio_files_map = dict()
+        setup_ini = IniObj(setup_file)
+        for idx in range(1, self.count+1):
+            ratio_file = _extract_ini_primitive_value(setup_ini[f"GEAR_{idx}"]["RATIOS"])
+            if ratio_file not in ratio_files_map:
+                ratio_files_map[ratio_file] = list()
+            ratio_files_map[ratio_file].append(idx)
+
+        if "FINAL_GEAR_RATIO" in setup_ini:
+            ratio_file = _extract_ini_primitive_value(setup_ini["FINAL_GEAR_RATIO"]["RATIOS"])
+            self.final_gears.extend(Gear.load_gears_from_file(os.path.join(lookup_path, ratio_file)))
+
+        dir_name, dirs, files = next(os.walk(lookup_path))
+        for filename in files:
+            if filename not in ratio_files_map:
+                continue
+
+            full_file_path = os.path.join(dir_name, filename)
+            gear_list = Gear.load_gears_from_file(full_file_path)
+            for gear_num in ratio_files_map[filename]:
+                if gear_num not in self.gears:
+                    self.gears[gear_num] = list()
+                self.gears[gear_num].extend(gear_list)
+
+
+FIRST = "1st"
+SECOND = "2nd"
+THIRD = "3rd"
+FOURTH = "4th"
+FIFTH = "5th"
+SIXTH = "6th"
+SEVENTH = "7th"
+EIGHTH = "8th"
+FINAL = "final"
+REVERSE = "reverse"
+GEAR_LOOKUP = {1: FIRST, 2: SECOND, 3: THIRD, 4: FOURTH, 5: FIFTH, 6: SIXTH, 7: SEVENTH, 8: EIGHTH}
 
 
 class Gear(object):
-    FIRST = "1st"
-    SECOND = "2nd"
-    THIRD = "3rd"
-    FOURTH = "4th"
-    FIFTH = "5th"
-    SIXTH = "6th"
-    SEVENTH = "7th"
-    EIGHTH = "8th"
-    FINAL = "final"
-    REVERSE = "reverse"
+    @staticmethod
+    def load_gears_from_file(file_path):
+        with open(file_path, "r") as f:
+            gear_list = list()
+            for line in f.readlines():
+                gear_info = line.strip().split("|")
+                if len(gear_info) > 1:
+                    gear_list.append(Gear(gear_info[0], float(gear_info[1])))
+        return gear_list
 
-    def __init__(self):
-        self.name: str = ""
-        self.ratio: float = 0.0
+    def __init__(self, name, ratio):
+        self.name: str = name
+        self.ratio: float = ratio
 
 
 class Differential(object):
@@ -177,8 +254,10 @@ class AutoClutch(object):
         if "AUTOCLUTCH" not in ini_object:
             ini_object["AUTOCLUTCH"] = dict()
         if self.upshift_profile:
+            ini_object["AUTOCLUTCH"]["UPSHIFT_PROFILE"] = self.upshift_profile.name
             self.upshift_profile.update_ini(ini_object)
         if self.downshift_profile:
+            ini_object["AUTOCLUTCH"]["DOWNSHIFT_PROFILE"] = self.downshift_profile.name
             self.downshift_profile.update_ini(ini_object)
         ini_object["AUTOCLUTCH"]["USE_ON_CHANGES"] = self.use_on_changes
         ini_object["AUTOCLUTCH"]["MIN_RPM"] = self.min_rpm
