@@ -127,6 +127,9 @@ class IniObj(configobj.ConfigObj):
             with open(self.filename, 'wb') as h:
                 h.write(output_bytes)
 
+    def dirname(self):
+        return os.path.dirname(os.path.abspath(self.filename))
+
     def _parse(self, infile):
         """Actually parse the config file."""
         temp_list_values = self.list_values
@@ -292,6 +295,14 @@ class IniObj(configobj.ConfigObj):
         elif not reset_comment:
             self.final_comment = comment_list
         self.list_values = temp_list_values
+
+
+def extract_ini_primitive_value(returned_val, cast_type=None):
+    if isinstance(returned_val, list):
+        returned_val = returned_val[0]
+    if cast_type:
+        return cast_type(returned_val.split()[0])
+    return returned_val.split()[0]
 
 
 def create_filename_safe_name(in_name):

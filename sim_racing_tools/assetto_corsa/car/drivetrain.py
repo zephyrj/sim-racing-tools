@@ -1,6 +1,6 @@
 import os
 from typing import List
-from sim_racing_tools.utils import IniObj
+from sim_racing_tools.utils import IniObj, extract_ini_primitive_value
 
 
 def load_drivetrain(drivetrain_ini_path):
@@ -25,9 +25,9 @@ class Drivetrain(object):
 
     def load_settings_from_ini(self, drivetrain_ini_data):
         self.ini_data = drivetrain_ini_data
-        self.version = int(_extract_ini_primitive_value(drivetrain_ini_data["HEADER"]["VERSION"]))
-        self.drive_type = _extract_ini_primitive_value(drivetrain_ini_data["TRACTION"]["TYPE"])
-        self.clutch_max_torque = int(_extract_ini_primitive_value(drivetrain_ini_data["CLUTCH"]["MAX_TORQUE"]))
+        self.version = extract_ini_primitive_value(drivetrain_ini_data["HEADER"]["VERSION"], int)
+        self.drive_type = extract_ini_primitive_value(drivetrain_ini_data["TRACTION"]["TYPE"])
+        self.clutch_max_torque = extract_ini_primitive_value(drivetrain_ini_data["CLUTCH"]["MAX_TORQUE"], int)
         self.gearbox.load_settings_from_ini(drivetrain_ini_data)
         self.differential.load_settings_from_ini(drivetrain_ini_data)
         self.auto_clutch.load_settings_from_ini(drivetrain_ini_data)
@@ -91,22 +91,22 @@ class Gearbox(object):
         self.inertia: float = 0.02
 
     def load_settings_from_ini(self, drivetrain_ini_data):
-        self.count = int(_extract_ini_primitive_value(drivetrain_ini_data["GEARS"]["COUNT"]))
-        self.reverse_gear = float(_extract_ini_primitive_value(drivetrain_ini_data["GEARS"]["GEAR_R"]))
-        self.default_final_gear = float(_extract_ini_primitive_value(drivetrain_ini_data["GEARS"]["FINAL"]))
+        self.count = extract_ini_primitive_value(drivetrain_ini_data["GEARS"]["COUNT"], int)
+        self.reverse_gear = extract_ini_primitive_value(drivetrain_ini_data["GEARS"]["GEAR_R"], float)
+        self.default_final_gear = extract_ini_primitive_value(drivetrain_ini_data["GEARS"]["FINAL"], float)
         for gear_num in range(1, self.count+1):
             self.default_gears[gear_num] = \
-                float(_extract_ini_primitive_value(drivetrain_ini_data["GEARS"][f"GEAR_{gear_num}"]))
+                extract_ini_primitive_value(drivetrain_ini_data["GEARS"][f"GEAR_{gear_num}"], float)
         self._lookup_gear_data(drivetrain_ini_data)
 
-        self.change_up_time = int(_extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["CHANGE_UP_TIME"]))
-        self.change_dn_time = int(_extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["CHANGE_DN_TIME"]))
-        self.auto_cutoff_time = int(_extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["AUTO_CUTOFF_TIME"]))
-        self.supports_shifter = int(_extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["SUPPORTS_SHIFTER"]))
-        self.valid_shift_rpm_window = int(_extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["VALID_SHIFT_RPM_WINDOW"]))
-        self.controls_window_gain = float(_extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["CONTROLS_WINDOW_GAIN"]))
+        self.change_up_time = extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["CHANGE_UP_TIME"], int)
+        self.change_dn_time = extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["CHANGE_DN_TIME"], int)
+        self.auto_cutoff_time = extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["AUTO_CUTOFF_TIME"], int)
+        self.supports_shifter = extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["SUPPORTS_SHIFTER"], int)
+        self.valid_shift_rpm_window = extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["VALID_SHIFT_RPM_WINDOW"], int)
+        self.controls_window_gain = extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["CONTROLS_WINDOW_GAIN"], float)
         if "INERTIA" in drivetrain_ini_data["GEARBOX"]:
-            self.inertia = float(_extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["INERTIA"]))
+            self.inertia = extract_ini_primitive_value(drivetrain_ini_data["GEARBOX"]["INERTIA"], float)
 
     def update_ini(self, ini_object):
         if "GEARS" not in ini_object:
@@ -155,13 +155,13 @@ class Gearbox(object):
         ratio_files_map = dict()
         setup_ini = IniObj(setup_file)
         for idx in range(1, self.count+1):
-            ratio_file = _extract_ini_primitive_value(setup_ini[f"GEAR_{idx}"]["RATIOS"])
+            ratio_file = extract_ini_primitive_value(setup_ini[f"GEAR_{idx}"]["RATIOS"])
             if ratio_file not in ratio_files_map:
                 ratio_files_map[ratio_file] = list()
             ratio_files_map[ratio_file].append(idx)
 
         if "FINAL_GEAR_RATIO" in setup_ini:
-            ratio_file = _extract_ini_primitive_value(setup_ini["FINAL_GEAR_RATIO"]["RATIOS"])
+            ratio_file = extract_ini_primitive_value(setup_ini["FINAL_GEAR_RATIO"]["RATIOS"])
             self.final_gears.extend(Gear.load_gears_from_file(os.path.join(lookup_path, ratio_file)))
 
         dir_name, dirs, files = next(os.walk(lookup_path))
@@ -213,9 +213,9 @@ class Differential(object):
         self.preload: int = 13
 
     def load_settings_from_ini(self, drivetrain_ini_data):
-        self.power = float(_extract_ini_primitive_value(drivetrain_ini_data["DIFFERENTIAL"]["POWER"]))
-        self.coast = float(_extract_ini_primitive_value(drivetrain_ini_data["DIFFERENTIAL"]["COAST"]))
-        self.preload = int(_extract_ini_primitive_value(drivetrain_ini_data["DIFFERENTIAL"]["PRELOAD"]))
+        self.power = extract_ini_primitive_value(drivetrain_ini_data["DIFFERENTIAL"]["POWER"], float)
+        self.coast = extract_ini_primitive_value(drivetrain_ini_data["DIFFERENTIAL"]["COAST"], float)
+        self.preload = extract_ini_primitive_value(drivetrain_ini_data["DIFFERENTIAL"]["PRELOAD"], int)
 
     def update_ini(self, ini_object):
         if "DIFFERENTIAL" not in ini_object:
@@ -239,16 +239,16 @@ class AutoClutch(object):
         self.forced_on: int = 0
 
     def load_settings_from_ini(self, drivetrain_ini_data):
-        up_profile = _extract_ini_primitive_value(drivetrain_ini_data["AUTOCLUTCH"]["UPSHIFT_PROFILE"])
+        up_profile = extract_ini_primitive_value(drivetrain_ini_data["AUTOCLUTCH"]["UPSHIFT_PROFILE"])
         if up_profile.lower() != "none":
             self.upshift_profile = ShiftProfile.create_from_section(drivetrain_ini_data, up_profile)
-        down_profile = _extract_ini_primitive_value(drivetrain_ini_data["AUTOCLUTCH"]["DOWNSHIFT_PROFILE"])
+        down_profile = extract_ini_primitive_value(drivetrain_ini_data["AUTOCLUTCH"]["DOWNSHIFT_PROFILE"])
         if down_profile.lower() != "none":
             self.downshift_profile = ShiftProfile.create_from_section(drivetrain_ini_data, down_profile)
-        self.use_on_changes = int(_extract_ini_primitive_value(drivetrain_ini_data["AUTOCLUTCH"]["USE_ON_CHANGES"]))
-        self.min_rpm = int(_extract_ini_primitive_value(drivetrain_ini_data["AUTOCLUTCH"]["MIN_RPM"]))
-        self.max_rpm = int(_extract_ini_primitive_value(drivetrain_ini_data["AUTOCLUTCH"]["MAX_RPM"]))
-        self.forced_on = int(_extract_ini_primitive_value(drivetrain_ini_data["AUTOCLUTCH"]["FORCED_ON"]))
+        self.use_on_changes = extract_ini_primitive_value(drivetrain_ini_data["AUTOCLUTCH"]["USE_ON_CHANGES"], int)
+        self.min_rpm = extract_ini_primitive_value(drivetrain_ini_data["AUTOCLUTCH"]["MIN_RPM"], int)
+        self.max_rpm = extract_ini_primitive_value(drivetrain_ini_data["AUTOCLUTCH"]["MAX_RPM"], int)
+        self.forced_on = extract_ini_primitive_value(drivetrain_ini_data["AUTOCLUTCH"]["FORCED_ON"], int)
 
     def update_ini(self, ini_object):
         if "AUTOCLUTCH" not in ini_object:
@@ -271,7 +271,7 @@ class ShiftProfile(object):
         profile = ShiftProfile()
         profile.name = section_name
         for idx in range(3):
-            profile.points.append(int(_extract_ini_primitive_value(ini_data[section_name][f"POINT_{idx}"])))
+            profile.points.append(extract_ini_primitive_value(ini_data[section_name][f"POINT_{idx}"], int))
         return profile
 
     def __init__(self):
@@ -300,10 +300,10 @@ class AutoBlip(object):
         self.level: float = 0.0
 
     def load_settings_from_ini(self, drivetrain_ini_data):
-        self.electronic = int(_extract_ini_primitive_value(drivetrain_ini_data["AUTOBLIP"]["ELECTRONIC"]))
+        self.electronic = extract_ini_primitive_value(drivetrain_ini_data["AUTOBLIP"]["ELECTRONIC"], int)
         for idx in range(3):
-            self.points.append((int(_extract_ini_primitive_value(drivetrain_ini_data["AUTOBLIP"][f"POINT_{idx}"]))))
-        self.level = float(_extract_ini_primitive_value(drivetrain_ini_data["AUTOBLIP"]["LEVEL"]))
+            self.points.append(extract_ini_primitive_value(drivetrain_ini_data["AUTOBLIP"][f"POINT_{idx}"], int))
+        self.level = extract_ini_primitive_value(drivetrain_ini_data["AUTOBLIP"]["LEVEL"], float)
 
     def update_ini(self, ini_object):
         if "AUTOBLIP" not in ini_object:
@@ -322,10 +322,10 @@ class AutoShifter(object):
         self.gas_cutoff_time: float = 0.0
 
     def load_settings_from_ini(self, drivetrain_ini_data):
-        self.up = int(_extract_ini_primitive_value(drivetrain_ini_data["AUTO_SHIFTER"]["UP"]))
-        self.down = int(_extract_ini_primitive_value(drivetrain_ini_data["AUTO_SHIFTER"]["DOWN"]))
-        self.slip_threshold = float(_extract_ini_primitive_value(drivetrain_ini_data["AUTO_SHIFTER"]["SLIP_THRESHOLD"]))
-        self.gas_cutoff_time = float(_extract_ini_primitive_value(drivetrain_ini_data["AUTO_SHIFTER"]["GAS_CUTOFF_TIME"]))
+        self.up = extract_ini_primitive_value(drivetrain_ini_data["AUTO_SHIFTER"]["UP"], int)
+        self.down = extract_ini_primitive_value(drivetrain_ini_data["AUTO_SHIFTER"]["DOWN"], int)
+        self.slip_threshold = extract_ini_primitive_value(drivetrain_ini_data["AUTO_SHIFTER"]["SLIP_THRESHOLD"], float)
+        self.gas_cutoff_time = extract_ini_primitive_value(drivetrain_ini_data["AUTO_SHIFTER"]["GAS_CUTOFF_TIME"], float)
 
     def update_ini(self, ini_object):
         if "AUTO_SHIFTER" not in ini_object:
@@ -346,10 +346,10 @@ class DownshiftProtection(object):
         self.lock_n = 1
 
     def load_settings_from_ini(self, drivetrain_ini_data):
-        self.active = int(_extract_ini_primitive_value(drivetrain_ini_data["DOWNSHIFT_PROTECTION"]["ACTIVE"]))
-        self.debug = int(_extract_ini_primitive_value(drivetrain_ini_data["DOWNSHIFT_PROTECTION"]["DEBUG"]))
-        self.overrev = int(_extract_ini_primitive_value(drivetrain_ini_data["DOWNSHIFT_PROTECTION"]["OVERREV"]))
-        self.lock_n = int(_extract_ini_primitive_value(drivetrain_ini_data["DOWNSHIFT_PROTECTION"]["LOCK_N"]))
+        self.active = extract_ini_primitive_value(drivetrain_ini_data["DOWNSHIFT_PROTECTION"]["ACTIVE"], int)
+        self.debug = extract_ini_primitive_value(drivetrain_ini_data["DOWNSHIFT_PROTECTION"]["DEBUG"], int)
+        self.overrev = extract_ini_primitive_value(drivetrain_ini_data["DOWNSHIFT_PROTECTION"]["OVERREV"], int)
+        self.lock_n = extract_ini_primitive_value(drivetrain_ini_data["DOWNSHIFT_PROTECTION"]["LOCK_N"], int)
 
     def update_ini(self, ini_object):
         if "DOWNSHIFT_PROTECTION" not in ini_object:
@@ -358,9 +358,3 @@ class DownshiftProtection(object):
         ini_object["DOWNSHIFT_PROTECTION"]["DEBUG"] = self.debug
         ini_object["DOWNSHIFT_PROTECTION"]["OVERREV"] = self.overrev
         ini_object["DOWNSHIFT_PROTECTION"]["LOCK_N"] = self.lock_n
-
-
-def _extract_ini_primitive_value(returned_val):
-    if isinstance(returned_val, list):
-        returned_val = returned_val[0]
-    return returned_val.split()[0]
