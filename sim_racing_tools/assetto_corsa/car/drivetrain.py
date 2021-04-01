@@ -125,6 +125,7 @@ class Gearbox(object):
         ini_object["GEARBOX"]["SUPPORTS_SHIFTER"] = self.supports_shifter
         ini_object["GEARBOX"]["VALID_SHIFT_RPM_WINDOW"] = self.valid_shift_rpm_window
         ini_object["GEARBOX"]["CONTROLS_WINDOW_GAIN"] = self.controls_window_gain
+        ini_object["GEARBOX"]["INERTIA"] = self.inertia
 
     def write_gear_files(self, output_dir):
         setup_file = os.path.join(output_dir, "setup.ini")
