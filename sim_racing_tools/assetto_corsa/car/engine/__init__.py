@@ -2,7 +2,6 @@ import toml
 import os
 
 from typing import List
-from collections import namedtuple
 from sim_racing_tools.utils import IniObj, extract_ini_primitive_value
 
 NATURALLY_ASPIRATED = "n/a"
@@ -19,21 +18,6 @@ def load_engine(engine_ini_path):
 
 
 class Engine(object):
-    def load_settings_from_ini(self, ini_data):
-        self.ini_data = ini_data
-        self.version = extract_ini_primitive_value(ini_data["HEADER"]["VERSION"], int)
-        self.altitude_sensitivity = extract_ini_primitive_value(ini_data["ENGINE_DATA"]["ALTITUDE_SENSITIVITY"], float)
-        self.inertia = extract_ini_primitive_value(ini_data["ENGINE_DATA"]["INERTIA"], float)
-        self.limiter = extract_ini_primitive_value(ini_data["ENGINE_DATA"]["LIMITER"], int)
-        self.limiter_hz = extract_ini_primitive_value(ini_data["ENGINE_DATA"]["LIMITER_HZ"], int)
-        self.minimum = extract_ini_primitive_value(ini_data["ENGINE_DATA"]["MINIMUM"], int)
-        self.rpm_threshold = extract_ini_primitive_value(ini_data["DAMAGE"]["RPM_THRESHOLD"], int)
-        self.rpm_damage_k = extract_ini_primitive_value(ini_data["DAMAGE"]["RPM_DAMAGE_K"], int)
-        self.power_info.load_from_lut(os.path.join(self.ini_data.dirname(),
-                                      extract_ini_primitive_value(self.ini_data["HEADER"]["POWER_CURVE"])))
-        self.coast_curve.load_from_ini(ini_data)
-        self.turbo.load_from_ini(ini_data)
-
     def __init__(self):
         self.ini_data = None
         self.version = 1  # The version of the assetto corsa ini file to output
@@ -53,6 +37,44 @@ class Engine(object):
 
         self.rpm_threshold = 0  # RPM at which the engine starts to take damage
         self.rpm_damage_k = 1  # amount of damage per second per (max - threshold)
+
+    def load_settings_from_ini(self, ini_data):
+        self.ini_data = ini_data
+        self.version = extract_ini_primitive_value(ini_data["HEADER"]["VERSION"], int)
+        self.altitude_sensitivity = extract_ini_primitive_value(ini_data["ENGINE_DATA"]["ALTITUDE_SENSITIVITY"], float)
+        self.inertia = extract_ini_primitive_value(ini_data["ENGINE_DATA"]["INERTIA"], float)
+        self.limiter = extract_ini_primitive_value(ini_data["ENGINE_DATA"]["LIMITER"], int)
+        self.limiter_hz = extract_ini_primitive_value(ini_data["ENGINE_DATA"]["LIMITER_HZ"], int)
+        self.minimum = extract_ini_primitive_value(ini_data["ENGINE_DATA"]["MINIMUM"], int)
+        self.rpm_threshold = extract_ini_primitive_value(ini_data["DAMAGE"]["RPM_THRESHOLD"], int)
+        self.rpm_damage_k = extract_ini_primitive_value(ini_data["DAMAGE"]["RPM_DAMAGE_K"], int)
+        self.power_info.load_from_lut(os.path.join(self.ini_data.dirname(),
+                                      extract_ini_primitive_value(self.ini_data["HEADER"]["POWER_CURVE"])))
+        self.coast_curve.load_from_ini(ini_data)
+        self.turbo.load_from_ini(ini_data)
+
+    def write(self, output_path=None):
+        if output_path is None and self.ini_data is None:
+            raise IOError("No output file specified")
+        ini_data = IniObj(output_path) if output_path else self.ini_data
+        if "HEADER" not in ini_data:
+            ini_data["HEADER"] = dict()
+        ini_data["HEADER"]["VERSION"] = self.version
+        if "ENGINE_DATA" not in ini_data:
+            ini_data["ENGINE_DATA"] = dict()
+        ini_data["ENGINE_DATA"]["ALTITUDE_SENSITIVITY"] = self.altitude_sensitivity
+        ini_data["ENGINE_DATA"]["INERTIA"] = self.inertia
+        ini_data["ENGINE_DATA"]["LIMITER"] = self.limiter
+        ini_data["ENGINE_DATA"]["LIMITER_HZ"] = self.limiter_hz
+        ini_data["ENGINE_DATA"]["MINIMUM"] = self.minimum
+        self.power_info.write_power_files(ini_data)
+        self.coast_curve.update_ini(ini_data)
+        if "DAMAGE" not in ini_data:
+            ini_data["DAMAGE"] = dict()
+        ini_data["DAMAGE"]["RPM_THRESHOLD"] = self.rpm_threshold
+        ini_data["DAMAGE"]["RPM_DAMAGE_K"] = self.rpm_damage_k
+        self.turbo.update_ini(ini_data)
+        ini_data.write()
 
     def aspiration(self):
         if self.turbo.is_present():
@@ -88,9 +110,18 @@ class Power(object):
 
     def load_from_lut(self, lut_path):
         with open(lut_path, "r") as f:
-            rpm, torque = tuple(f.readline().strip().split("|"))
-            self.rpm_curve.append(int(rpm))
-            self.torque_curve.append(int(torque))
+            for line in f.readlines():
+                if "|" not in line:
+                    continue
+                rpm, torque = tuple(line.strip().split("|"))
+                self.rpm_curve.append(int(rpm))
+                self.torque_curve.append(int(torque))
+
+    def write_power_files(self, ini_data):
+        with open(os.path.join(ini_data.dirname(), "power.lut"), "w+") as f:
+            for idx, rpm in enumerate(self.rpm_curve):
+                f.write(f"{rpm}|{self.torque_curve[idx]}\n")
+        ini_data["HEADER"]["POWER_CURVE"] = "power.lut"
 
 
 class CoastCurve(object):
@@ -142,24 +173,15 @@ class CoastCurve(object):
         self.torque = extract_ini_primitive_value(ini_data["COAST_REF"]["TORQUE"], int)
         self.non_linearity = extract_ini_primitive_value(ini_data["COAST_REF"]["NON_LINEARITY"], int)
 
+    def update_ini(self, ini_data):
+        ini_data["HEADER"]["COAST_CURVE"] = self.curve_data_source
+        if "COAST_REF" not in ini_data:
+            ini_data["COAST_REF"] = dict()
+        ini_data["COAST_REF"]["RPM"] = self.reference_rpm
+        ini_data["COAST_REF"]["TORQUE"] = self.torque
+        ini_data["COAST_REF"]["NON_LINEARITY"]= self.non_linearity
 
-"""
-Example:
-    [TURBO_0]
-    LAG_DN=0.99				; Interpolation lag used slowing down the turbo
-    LAG_UP=0.992				; Interpolation lag used to spin up the turbo
-    MAX_BOOST=1.38 				; Maximum boost generated. This value is never exceeded and multiply the torque 
-                                ; like T=T*(1.0 + boost), so a boost of 2 will give you 3 times the torque
-                                ; at a given rpm.
-    WASTEGATE=1.10				; Max level of boost before the wastegate does its things. 0 = no wastegate
-    DISPLAY_MAX_BOOST=1.10		; Value used by display apps
-    REFERENCE_RPM=2000			; The reference rpm where the turbo reaches maximum boost (at max gas pedal). 
-    GAMMA=2.5
-    COCKPIT_ADJUSTABLE=0
-"""
-TurboSection = namedtuple('TurboSection',
-                          ['lag_dn', 'lag_up', 'max_boost', 'wastegate', 'display_max_boost',
-                           'reference_rpm', 'gamma', 'cockpit_adjustable'])
+
 class Turbo(object):
     """
     # This is going to need some work. We can get a boost curve
@@ -189,16 +211,71 @@ class Turbo(object):
             turbo_section_name = f"TURBO_{turbo_idx}"
             if turbo_section_name not in ini_data:
                 break
-            section = TurboSection(extract_ini_primitive_value(ini_data[turbo_section_name]["LAG_DN"], float),
-                                   extract_ini_primitive_value(ini_data[turbo_section_name]["LAG_UP"], float),
-                                   extract_ini_primitive_value(ini_data[turbo_section_name]["MAX_BOOST"], float),
-                                   extract_ini_primitive_value(ini_data[turbo_section_name]["WASTEGATE"], float),
-                                   extract_ini_primitive_value(ini_data[turbo_section_name]["DISPLAY_MAX_BOOST"], float),
-                                   extract_ini_primitive_value(ini_data[turbo_section_name]["REFERENCE_RPM"], int),
-                                   extract_ini_primitive_value(ini_data[turbo_section_name]["GAMMA"], float),
-                                   extract_ini_primitive_value(ini_data[turbo_section_name]["COCKPIT_ADJUSTABLE"], float))
+            section = TurboSection()
+            section.load_from_ini(turbo_idx, ini_data)
             self.sections.append(section)
             turbo_idx += 1
 
     def is_present(self):
         return len(self.sections) > 0
+
+    def update_ini(self, ini_data):
+        ini_data["DAMAGE"]["TURBO_BOOST_THRESHOLD"] = self.turbo_boost_threshold
+        ini_data["DAMAGE"]["TURBO_DAMAGE_K"] = self.turbo_damage_k
+        if self.is_present():
+            for turbo_idx, section in enumerate(self.sections):
+                section.update_ini_with_section(turbo_idx, ini_data)
+            if self.pressure_threshold:
+                if "BOV" not in ini_data:
+                    ini_data["BOV"] = dict()
+                ini_data["BOV"]["PRESSURE_THRESHOLD"] = self.pressure_threshold
+
+
+class TurboSection(object):
+    """
+    Example:
+        [TURBO_0]
+        LAG_DN=0.99				; Interpolation lag used slowing down the turbo
+        LAG_UP=0.992				; Interpolation lag used to spin up the turbo
+        MAX_BOOST=1.38 				; Maximum boost generated. This value is never exceeded and multiply the torque
+                                    ; like T=T*(1.0 + boost), so a boost of 2 will give you 3 times the torque
+                                    ; at a given rpm.
+        WASTEGATE=1.10				; Max level of boost before the wastegate does its things. 0 = no wastegate
+        DISPLAY_MAX_BOOST=1.10		; Value used by display apps
+        REFERENCE_RPM=2000			; The reference rpm where the turbo reaches maximum boost (at max gas pedal).
+        GAMMA=2.5
+        COCKPIT_ADJUSTABLE=0
+    """
+    def __init__(self):
+        self.lag_dn: float = 0.0
+        self.lag_up: float = 0.0
+        self.max_boost: float = 0.0
+        self.wastegate: float = 0.0
+        self.display_max_boost: float = 0.0
+        self.reference_rpm: int = 0
+        self.gamma: float = 1.0
+        self.cockpit_adjustable: int = 0
+
+    def load_from_ini(self, section_idx, ini_data):
+        turbo_section_name = f"TURBO_{section_idx}"
+        self.lag_dn = extract_ini_primitive_value(ini_data[turbo_section_name]["LAG_DN"], float)
+        self.lag_up = extract_ini_primitive_value(ini_data[turbo_section_name]["LAG_UP"], float)
+        self.max_boost = extract_ini_primitive_value(ini_data[turbo_section_name]["MAX_BOOST"], float)
+        self.wastegate = extract_ini_primitive_value(ini_data[turbo_section_name]["WASTEGATE"], float)
+        self.display_max_boost = extract_ini_primitive_value(ini_data[turbo_section_name]["DISPLAY_MAX_BOOST"], float)
+        self.reference_rpm = extract_ini_primitive_value(ini_data[turbo_section_name]["REFERENCE_RPM"], int)
+        self.gamma = extract_ini_primitive_value(ini_data[turbo_section_name]["GAMMA"], float)
+        self.cockpit_adjustable = extract_ini_primitive_value(ini_data[turbo_section_name]["COCKPIT_ADJUSTABLE"], float)
+
+    def update_ini_with_section(self, section_idx, ini_data):
+        turbo_section_name = f"TURBO_{section_idx}"
+        if turbo_section_name not in ini_data:
+            ini_data[turbo_section_name] = dict()
+        ini_data[turbo_section_name]["LAG_DN"] = self.lag_dn
+        ini_data[turbo_section_name]["LAG_UP"] = self.lag_up
+        ini_data[turbo_section_name]["MAX_BOOST"] = self.max_boost
+        ini_data[turbo_section_name]["WASTEGATE"] = self.wastegate
+        ini_data[turbo_section_name]["DISPLAY_MAX_BOOST"] = self.display_max_boost
+        ini_data[turbo_section_name]["REFERENCE_RPM"] = self.reference_rpm
+        ini_data[turbo_section_name]["GAMMA"] = self.gamma
+        ini_data[turbo_section_name]["COCKPIT_ADJUSTABLE"] = self.cockpit_adjustable
