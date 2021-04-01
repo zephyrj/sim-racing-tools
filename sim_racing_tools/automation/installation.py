@@ -3,8 +3,6 @@ import sys
 if sys.platform == "win32":
     from win32com.shell import shell, shellcon
 
-import automation.constants as constants
-
 import sys
 import os
 import constants
