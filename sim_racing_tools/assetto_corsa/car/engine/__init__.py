@@ -198,7 +198,7 @@ class Turbo(object):
         the pressure on the intake depends on throttle, this is mostly used for fmod audio
         """
         self.pressure_threshold: None or float = None
-        self.turbo_boost_threshold: float = 0  # level of TOTAL boost before the engine starts to take damage
+        self.turbo_boost_threshold: float = 1.0  # level of TOTAL boost before the engine starts to take damage
         self.turbo_damage_k: int = 0  # amount of damage per second per (boost - threshold)
 
     def load_from_ini(self, ini_data):
