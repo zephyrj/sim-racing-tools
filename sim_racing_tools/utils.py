@@ -8,9 +8,37 @@ from configobj import BOM_LIST, Section, BOM_UTF8, match_utf8, unrepr
 
 
 class IniObj(configobj.ConfigObj):
+    # this regexp is taken from the original ConfigObj class and tweaked to treat
+    # semi colons as comments
+    _valueexp = re.compile(r'''^
+            (?:
+                (?:
+                    (
+                        (?:
+                            (?:
+                                (?:".*?")|              # double quotes
+                                (?:'.*?')|              # single quotes
+                                (?:[^'",\#;][^,\#;]*?)    # unquoted
+                            )
+                            \s*,\s*                     # comma
+                        )*      # match all list items ending in a comma (if any)
+                    )
+                    (
+                        (?:".*?")|                      # double quotes
+                        (?:'.*?')|                      # single quotes
+                        (?:[^'",\#;\s][^,]*?)|           # unquoted
+                        (?:(?<!,))                      # Empty value
+                    )?          # last item in a list - or string value
+                )|
+                (,)             # alternatively a single comma - empty list
+            )
+            \s*([\#;].*)?          # optional comment
+            $''', re.VERBOSE)
+
     def __init__(self, *args, **kwargs):
         configobj.ConfigObj.__init__(self, *args, **kwargs)
         self.is_new_file = True if not os.path.isfile(self.filename) else False
+        self._valueexp = IniObj._valueexp
 
     def _write_line(self, indent_string, entry, this_entry, comment):
         """Write an individual line, for the write method"""
@@ -129,6 +157,14 @@ class IniObj(configobj.ConfigObj):
 
     def dirname(self):
         return os.path.dirname(os.path.abspath(self.filename))
+
+    def update_attribute(self, attribute_name, value, section_name=None):
+        if section_name:
+            if section_name not in self:
+                self[section_name] = dict()
+            self[section_name][attribute_name] = value
+        else:
+            self[attribute_name] = value
 
     def _parse(self, infile):
         """Actually parse the config file."""
