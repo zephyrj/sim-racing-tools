@@ -181,9 +181,9 @@ class Car(object):
         self.max_fuel: int = 0  # max fuel in litres
         self.ai_shift_up: int = 0
         self.ai_shift_down: int = 0
-        self.shift_lights_rpms: List[int] = list()
-        self.engine = None
-        self.drivetrain = None
+        self.engine: engine.Engine or None = None
+        self.drivetrain: drivetrain.Drivetrain or None = None
+        self.shift_lights: ShiftLights = ShiftLights()
 
     def load_from_path(self, car_path):
         self.car_path = car_path
@@ -198,10 +198,38 @@ class Car(object):
         self._load_ai_data()
         self.engine = engine.load_engine(os.path.join(self.data_path, "engine.ini"))
         self.drivetrain = drivetrain.load_drivetrain(os.path.join(self.data_path, "drivetrain.ini"))
+        self.shift_lights.load_from_ini(self.data_path)
         self.car_ini_data = ini_data
 
     def swap_engine(self, new_engine):
-        pass
+        """
+        ai.ini:
+        [GEARS]
+        UP - What RPM AI should shift up
+        DOWN - What RPM AI should shift down
+
+        car.ini
+        [BASIC] TOTALMASS (Take a value for the chassis and existing engine and adjust accordingly)
+        [FUEL] CONSUMPTION
+        [INERTIA] If the engine weight changes does this affect this?
+
+        digital_instruments.ini
+        [LED_0] - [LED_4] - used for showing shift lights
+
+        drivetrain.ini
+        [AUTOCLUTCH]
+        [AUTO_SHIFTER]
+        [DOWNSHIFT_PROTECTION] (dependant on quality?)
+
+        :param new_engine:
+        :return:
+        """
+        self.engine = new_engine
+        if new_engine.fuel_consumption:
+            self.fuel_consumption = new_engine.fuel_consumption
+        if not self.data_path:
+            return
+        self.shift_lights.update(self.engine.limiter)
 
     def write(self, output_path=None):
         if output_path is None and self.car_ini_data is None:
@@ -217,6 +245,7 @@ class Car(object):
         self._write_ai_data(ini_data.dirname())
         self.engine.write(os.path.join(ini_data.dirname(), "engine.ini"))
         self.drivetrain.write(os.path.join(ini_data.dirname(), "drivetrain.ini"))
+        self.shift_lights.write(ini_data.dirname())
 
     def _load_ai_data(self):
         ai_file_path = os.path.join(self.data_path, "ai.ini")
@@ -229,6 +258,70 @@ class Car(object):
         ai_ini.update_attribute("UP", self.ai_shift_up, section_name="GEARS")
         ai_ini.update_attribute("DOWN", self.ai_shift_down, section_name="GEARS")
         ai_ini.write()
+
+
+class ShiftLights(object):
+    def __init__(self):
+        self.leds: List[ShiftLED] = list()
+
+    def load_from_ini(self, ini_dir):
+        instruments_path = os.path.join(ini_dir, "digital_instruments.ini")
+        if not os.path.isfile(instruments_path):
+            return
+        instruments_ini = utils.IniObj(instruments_path)
+        led_idx = 0
+        while True:
+            led_section_name = f"LED_{led_idx}"
+            if led_section_name not in instruments_ini:
+                break
+            self.leds.append(ShiftLED.create_from_led_section(instruments_ini[led_section_name]))
+            led_idx += 1
+
+    def update(self, limiter_rpm):
+        # TODO allow spacing of the lights to be provided rather than just 100RPM
+        rpm_switch_val = limiter_rpm - 100
+        for led in reversed(self.leds):
+            led.rpm_switch = rpm_switch_val
+            led.blink_switch = limiter_rpm
+            rpm_switch_val -= 100
+
+    def write(self, output_path):
+        ini_file = utils.IniObj(os.path.join(output_path, "digital_instruments.ini"))
+        for led_idx, led in enumerate(self.leds):
+            led_section_name = f"LED_{led_idx}"
+            if led_section_name not in ini_file:
+                ini_file[led_section_name] = dict()
+            led.write_to_section(ini_file[led_section_name])
+        ini_file.write()
+
+
+class ShiftLED(object):
+    @staticmethod
+    def create_from_led_section(section):
+        l = ShiftLED()
+        l.object_name = section["OBJECT_NAME"]
+        l.rpm_switch = section["RPM_SWITCH"]
+        l.emissive = section["EMISSIVE"]
+        l.diffuse = section["DIFFUSE"]
+        l.blink_switch = section["BLINK_SWITCH"]
+        l.blink_hz = section["BLINK_HZ"]
+        return l
+
+    def __init__(self):
+        self.object_name: str = ""
+        self.rpm_switch: int = 0
+        self.emissive: List[float] = list()
+        self.diffuse: float = 0.0
+        self.blink_switch: int = 0
+        self.blink_hz: int = 0
+
+    def write_to_section(self, section):
+        section["OBJECT_NAME"] = self.object_name
+        section["RPM_SWITCH"] = self.rpm_switch
+        section["EMISSIVE"] = self.emissive
+        section["DIFFUSE"] = self.diffuse
+        section["BLINK_SWITCH"] = self.blink_switch
+        section["BLINK_HZ"] = self.blink_hz
 
 
 class UIInfo(object):
