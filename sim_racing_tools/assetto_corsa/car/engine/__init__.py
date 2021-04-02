@@ -21,7 +21,8 @@ class Engine(object):
     def __init__(self):
         self.ini_data = None
         self.version = 1  # The version of the assetto corsa ini file to output
-        self.mass_kg: int = 0  # sql Variants.Weight
+        self.mass_kg: None or int = None  # sql Variants.Weight
+        self.fuel_consumption: None or int = None
 
         self.power_info: Power = Power()
         self.coast_curve: CoastCurve = CoastCurve()
@@ -229,6 +230,16 @@ class Turbo(object):
                 if "BOV" not in ini_data:
                     ini_data["BOV"] = dict()
                 ini_data["BOV"]["PRESSURE_THRESHOLD"] = self.pressure_threshold
+        else:
+            turbo_idx = 0
+            while True:
+                turbo_section_name = f"TURBO_{turbo_idx}"
+                if turbo_section_name not in ini_data:
+                    break
+                ini_data.pop(turbo_section_name)
+                turbo_idx += 1
+            if "BOV" in ini_data:
+                ini_data.pop("BOV")
 
 
 class TurboSection(object):
