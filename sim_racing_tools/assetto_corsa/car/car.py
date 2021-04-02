@@ -1,4 +1,4 @@
-def install_engine_from_automation(car, engine):
+def install_engine_from_automation(ac_car_dir, automation_export_dir):
     """
     ai.ini:
       [GEARS]
@@ -61,10 +61,13 @@ def install_engine_from_automation(car, engine):
     Warnings:
       if engine torque is greater than [CLUTCH].MAX_TORQUE in drivetrain.ini
 
-    :param car:
-    :param engine:
+    :param ac_car_dir:
+    :param automation_export_dir:
     :return:
     """
+    # Load existing car data
+    # Replace engine data
+    # update
     pass
 
 
