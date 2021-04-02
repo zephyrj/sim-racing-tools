@@ -59,7 +59,7 @@ class IniObj(configobj.ConfigObj):
             self.indent_type = configobj.DEFAULT_INDENT_TYPE
 
         out = []
-        cs = self._a_to_u('#')
+        cs = (self._a_to_u('#'), self._a_to_u(';'))
         csp = self._a_to_u('# ')
         if section is None:
             int_val = self.interpolation
