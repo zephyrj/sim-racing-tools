@@ -40,7 +40,7 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     # engine.max_power = (round(engine_data["PeakPower"]), round(engine_data["PeakPowerRPM"]))
     # engine.max_torque = (round(engine_data["PeakTorque"]), round(engine_data["PeakTorqueRPM"]))
     engine.inertia = round(jbeam_engine_data["Camso_Engine"]["mainEngine"]["inertia"], 3)
-    engine.minimum = round(engine_data["IdleSpeed"])
+    engine.minimum = round(engine_data["IdleSpeed"] if engine_data["IdleSpeed"] >= engine_data["rpm-curve"][0] else engine_data["rpm-curve"][0])
     engine.limiter = round(engine_data["MaxRPM"])
     # TODO work out how to use the min acceptable value from Automation based
     # TODO on the engine components and their quality
@@ -60,11 +60,16 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     # This is being generous for now as the Econ value doesn't apply for MaxPower
     # we can look up the econ value @ Max power later
     # TODO refine this to get an average over a wider range of engine usage
-    engine.fuel_consumption = (fuel_use_per_sec * 1000) / engine_data["PeakPowerRPM"]
+    engine.fuel_consumption = round((fuel_use_per_sec * 1000) / engine_data["PeakPowerRPM"], 3)
 
     for idx in range(0, len(engine_data["rpm-curve"])):
         engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][idx]))
         engine.power_info.torque_curve.append(round(engine_data["torque-curve"][idx]))
+    rpm_increments = engine_data["rpm-curve"][-1] - engine_data["rpm-curve"][-2]
+    engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][-1]+rpm_increments))
+    engine.power_info.torque_curve.append(round(engine_data["torque-curve"][-1] / 2))
+    engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][-1] + (rpm_increments*2)))
+    engine.power_info.torque_curve.append(0)
 
     dynamic_friction = jbeam_engine_data["Camso_Engine"]["mainEngine"]["dynamicFriction"]
     angular_velocity_at_max_rpm = (engine_data["MaxRPM"] * 2 * math.pi) / 60
@@ -72,8 +77,7 @@ def generate_assetto_corsa_engine_data(exported_car_name):
                       (2*jbeam_engine_data["Camso_Engine"]["mainEngine"]["friction"])
 
     engine.coast_curve.curve_data_source = FROM_COAST_REF
-    engine.coast_curve.reference_rpm = engine_data["MaxRPM"]
-    engine.coast_curve.torque = round(friction_torque, 3)
+    engine.coast_curve.reference_rpm = round(engine_data["MaxRPM"])
+    engine.coast_curve.torque = round(friction_torque)
     engine.coast_curve.non_linearity = 0
-
     return engine
