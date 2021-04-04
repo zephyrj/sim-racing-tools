@@ -47,7 +47,8 @@ def get_engine_performance_data(variant_uid):
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
         engine_result_columns = ["AverageCruiseEcon", "Econ", "MinEcon", "WorstEcon", "EconEff", "IdleSpeed", "MaxRPM",
-                                 "MTTF", "Weight", "PeakTorque", "PeakTorqueRPM", "PeakPower", "PeakPowerRPM"]
+                                 "MTTF", "Weight", "PeakTorque", "PeakTorqueRPM", "PeakPower", "PeakPowerRPM",
+                                 "PeakBoost", "PeakBoostRPM"]
         query = f"SELECT {', '.join(engine_result_columns)} FROM EngineResults WHERE uid = ?"
         return cur.execute(query, (variant_uid,)).fetchone()
 

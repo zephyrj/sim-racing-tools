@@ -1,7 +1,50 @@
+"""
+Copyright (c):
+2003-2010, Michael Foord
+2014, Eli Courtwright, Rob Dennis
+All rights reserved.
+E-mails :
+fuzzyman AT voidspace DOT org DOT uk
+eli AT courtwright DOT org
+rdennis AT gmail DOT com
+
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the names of Michael Foord, Eli Courtwright or Rob Dennis,
+      nor the name of Voidspace,  may be used to endorse or promote
+      products derived from this software without specific prior written
+      permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+
 import sys
 import os
 import re
 import six
+import decimal
 
 import configobj
 from configobj import BOM_LIST, Section, BOM_UTF8, match_utf8, unrepr
@@ -354,3 +397,15 @@ def create_filename_safe_name(in_name):
     """
     normalized = re.sub(r"[^\w\s]", '', in_name)
     return re.sub(r"\s+", '_', normalized)
+
+
+def round_up(x, place=0):
+    context = decimal.getcontext()
+    # get the original setting so we can put it back when we're done
+    original_rounding = context.rounding
+    # change context to act like ceil()
+    context.rounding = decimal.ROUND_CEILING
+
+    rounded = round(decimal.Decimal(str(x)), place)
+    context.rounding = original_rounding
+    return float(rounded)

@@ -4,10 +4,11 @@ import math
 
 import automation.installation as installation
 import automation.sandbox as sandbox
+import sim_racing_tools.utils as utils
 from automation.car_file_decoder import CarFile
 from automation.jbeam import Parser as JBeamParser
 
-from assetto_corsa.car.engine import Engine, FROM_COAST_REF
+from assetto_corsa.car.engine import Engine, TurboSection, FROM_COAST_REF
 
 
 def generate_assetto_corsa_engine_data(exported_car_name):
@@ -62,12 +63,15 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     # TODO refine this to get an average over a wider range of engine usage
     engine.fuel_consumption = round((fuel_use_per_sec * 1000) / engine_data["PeakPowerRPM"], 3)
 
-    for idx in range(0, len(engine_data["rpm-curve"])):
-        engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][idx]))
-        engine.power_info.torque_curve.append(round(engine_data["torque-curve"][idx]))
+    if engine_data["AspirationType"].startswith("Aspiration_Natural"):
+        write_na_torque_curve(engine, engine_data)
+    else:
+        write_turbo_torque_curve(engine, engine_data)
+        create_turbo_sections(engine, engine_data)
+
     rpm_increments = engine_data["rpm-curve"][-1] - engine_data["rpm-curve"][-2]
     engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][-1]+rpm_increments))
-    engine.power_info.torque_curve.append(round(engine_data["torque-curve"][-1] / 2))
+    engine.power_info.torque_curve.append(round(engine.power_info.torque_curve[-1] / 2))
     engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][-1] + (rpm_increments*2)))
     engine.power_info.torque_curve.append(0)
 
@@ -76,8 +80,39 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     friction_torque = (angular_velocity_at_max_rpm * dynamic_friction) + \
                       (2*jbeam_engine_data["Camso_Engine"]["mainEngine"]["friction"])
 
+    with open("boost.lut", "w+") as f:
+        for idx, rpm in enumerate(engine_data["rpm-curve"]):
+            f.write(f'{round(rpm)}|{engine_data["boost-curve"][idx]}\n')
+
     engine.coast_curve.curve_data_source = FROM_COAST_REF
     engine.coast_curve.reference_rpm = round(engine_data["MaxRPM"])
     engine.coast_curve.torque = round(friction_torque)
     engine.coast_curve.non_linearity = 0
     return engine
+
+
+def write_na_torque_curve(engine, engine_data):
+    for idx in range(0, len(engine_data["rpm-curve"])):
+        engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][idx]))
+        engine.power_info.torque_curve.append(round(engine_data["torque-curve"][idx]))
+
+
+def write_turbo_torque_curve(engine, engine_data):
+    for idx in range(0, len(engine_data["rpm-curve"])):
+        engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][idx]))
+        boost_pressure = max(0, engine_data["boost-curve"][idx])
+        engine.power_info.torque_curve.append(round(engine_data["torque-curve"][idx] / (1+boost_pressure)))
+
+
+def create_turbo_sections(engine, engine_data):
+    t = TurboSection()
+    t.cockpit_adjustable = 0
+    t.max_boost = round(engine_data["PeakBoost"], 2)
+    t.display_max_boost = utils.round_up(engine_data["PeakBoost"], 1)
+    t.wastegate = round(engine_data["PeakBoost"], 2)
+    t.reference_rpm = round(engine_data["PeakBoostRPM"])
+    # TODO work out how to better approximate these
+    t.lag_dn = 0.99
+    t.lag_up = 0.995
+    t.gamma = 1
+    engine.turbo.sections.append(t)
