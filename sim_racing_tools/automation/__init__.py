@@ -8,7 +8,11 @@ import sim_racing_tools.utils as utils
 from automation.car_file_decoder import CarFile
 from automation.jbeam import Parser as JBeamParser
 
-from assetto_corsa.car.engine import Engine, TurboSection, FROM_COAST_REF, EngineSources
+from assetto_corsa.car.engine import Engine, TurboSection, FROM_COAST_REF, EngineSources, EngineUIData
+
+
+def kw_to_bhp(kw):
+    return kw / 0.745699872
 
 
 def generate_assetto_corsa_engine_data(exported_car_name):
@@ -39,6 +43,14 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     engine.metadata.source = EngineSources.AUTOMATION
     engine.metadata.mass_kg = round(engine_data["Weight"])
     engine.metadata.info_dict["automation-version"] = engine_data["GameVersion"]
+    ui_data = EngineUIData()
+    ui_data.torque_curve = [[str(round(rpm)), str(round(engine_data["torque-curve"][idx]))]
+                            for idx, rpm in enumerate(engine_data["rpm-curve"])]
+    ui_data.max_torque = f"{round(engine_data['PeakTorque'])}Nm"
+    ui_data.power_curve = [[str(round(rpm)), str(round(kw_to_bhp(engine_data["power-curve"][idx])))]
+                           for idx, rpm in enumerate(engine_data["rpm-curve"])]
+    ui_data.max_power = f"{round(kw_to_bhp(engine_data['PeakPower']))}bhp"
+    engine.metadata.ui_data = ui_data
 
     # engine.max_power = (round(engine_data["PeakPower"]), round(engine_data["PeakPowerRPM"]))
     # engine.max_torque = (round(engine_data["PeakTorque"]), round(engine_data["PeakTorqueRPM"]))
