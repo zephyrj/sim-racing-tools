@@ -1,5 +1,0 @@
-source = "automation"
-mass_kg = 96
-
-[info_dict]
-automation-version = 2103300000

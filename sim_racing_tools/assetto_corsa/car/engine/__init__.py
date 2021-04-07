@@ -10,7 +10,7 @@ TURBO = "turbo"
 
 FROM_COAST_REF = "FROM_COAST_REF"
 
-METADATA_FILENAME = "metadata.toml"
+METADATA_FILENAME = "engine-metadata.toml"
 BOOST_FILENAME = "boost.csv"
 
 
@@ -26,9 +26,37 @@ class EngineSources(object):
     AUTOMATION = "automation"
 
 
+class EngineUIData(object):
+    @staticmethod
+    def from_dict(data_dict):
+        e = EngineUIData()
+        if "torque-curve" in data_dict:
+            e.torque_curve = data_dict["torque-curve"]
+        if "power-curve" in data_dict:
+            e.power_curve = data_dict["power-curve"]
+        if "max-torque" in data_dict:
+            e.max_torque = data_dict["max-torque"]
+        if "max-power" in data_dict:
+            e.max_power = data_dict["max-power"]
+        return e
+
+    def __init__(self):
+        self.torque_curve: List[List[str]] = list()
+        self.power_curve: List[List[str]] = list()
+        self.max_torque = "---"
+        self.max_power = "---"
+
+    def to_dict(self):
+        return {"torque-curve": self.torque_curve,
+                "power-curve": self.power_curve,
+                "max-torque": self.max_torque,
+                "max-power": self.max_power}
+
+
 class EngineMetadata(object):
     def __init__(self):
         self.source = None
+        self.ui_data = None
         self.mass_kg: int or None = None
         self.boost_curve = dict()
         self.info_dict = dict()
@@ -41,6 +69,8 @@ class EngineMetadata(object):
                 for a in ["source", "mass_kg", "info_dict"]:
                     if a in data_dict:
                         setattr(self, a, data_dict[a])
+                if "ui_data" in data_dict:
+                    self.ui_data = EngineUIData.from_dict(data_dict["ui_data"])
         boost_filepath = os.path.join(data_dir, BOOST_FILENAME)
         if os.path.isfile(boost_filepath):
             with open(boost_filepath, "r") as f:
@@ -52,7 +82,11 @@ class EngineMetadata(object):
 
     def _write_metadate_file(self, output_dir):
         with open(os.path.join(output_dir, METADATA_FILENAME), "w+") as f:
-            toml.dump({"source": self.source, "mass_kg": self.mass_kg, "info_dict": self.info_dict}, f)
+            ui_data = None if not self.ui_data else self.ui_data.to_dict()
+            toml.dump({"source": self.source,
+                       "mass_kg": self.mass_kg,
+                       "ui_data": ui_data,
+                       "info_dict": self.info_dict}, f)
 
     def _write_boost_curve(self, output_dir):
         if self.boost_curve:
