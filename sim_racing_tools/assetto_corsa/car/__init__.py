@@ -200,6 +200,7 @@ class Car(object):
         self.drivetrain = drivetrain.load_drivetrain(os.path.join(self.data_path, "drivetrain.ini"))
         self.shift_lights.load_from_ini(self.data_path)
         self.car_ini_data = ini_data
+        self.ui_info.load(self.car_path)
 
     def swap_engine(self, new_engine):
         """
@@ -230,6 +231,11 @@ class Car(object):
         if not self.data_path:
             return
         self.shift_lights.update(self.engine.limiter)
+        if self.engine.metadata.ui_data:
+            self.ui_info.torqueCurve = new_engine.metadata.ui_data.torque_curve
+            self.ui_info.powerCurve = new_engine.metadata.ui_data.power_curve
+            self.ui_info.specs["bhp"] = new_engine.metadata.ui_data.max_power
+            self.ui_info.specs["torque"] = new_engine.metadata.ui_data.max_torque
 
     def write(self, output_path=None):
         if output_path is None and self.car_ini_data is None:
@@ -246,6 +252,7 @@ class Car(object):
         self.engine.write(os.path.join(ini_data.dirname(), "engine.ini"))
         self.drivetrain.write(os.path.join(ini_data.dirname(), "drivetrain.ini"))
         self.shift_lights.write(ini_data.dirname())
+        self.ui_info.write(self.car_path if not output_path else output_path)
 
     def _load_ai_data(self):
         ai_file_path = os.path.join(self.data_path, "ai.ini")
@@ -326,7 +333,8 @@ class ShiftLED(object):
 
 class UIInfo(object):
     def __init__(self):
-        self.ui_ini_json = None
+        self.loaded_ui_json_data = None
+        self.ui_json_path = None
         self.name: str = ""
         self.brand: str = ""
         self.description: str = ""
@@ -347,5 +355,25 @@ class UIInfo(object):
         '''
         self.specs = dict()
 
-        self.torque_curve: List[List[str]] = list()
-        self.power_curve: List[List[str]] = list()
+        self.torqueCurve: List[List[str]] = list()
+        self.powerCurve: List[List[str]] = list()
+
+    def load(self, car_path):
+        ui_json_path = os.path.join(car_path, os.path.sep.join(["ui", "ui_car.json"]))
+        if not os.path.isfile(ui_json_path):
+            return
+        self.ui_json_path = ui_json_path
+        with open(self.ui_json_path, "r") as f:
+            self.loaded_ui_json_data = json.load(f)
+        for a in ["name", "brand", "description", "tags", "specs", "torqueCurve", "powerCurve"]:
+            if a in self.loaded_ui_json_data:
+                setattr(self, a, self.loaded_ui_json_data[a])
+        if "class" in self.loaded_ui_json_data:
+            self.car_class = self.loaded_ui_json_data["class"]
+
+    def write(self, output_dir):
+        for a in ["name", "brand", "description", "tags", "specs", "torqueCurve", "powerCurve"]:
+            self.loaded_ui_json_data[a] = getattr(self, a)
+        self.loaded_ui_json_data["class"] = self.car_class
+        with open(os.path.join(output_dir, os.path.sep.join(["ui", "ui_car.json"])), "w+") as f:
+            json.dump(self.loaded_ui_json_data, f, indent=4)
