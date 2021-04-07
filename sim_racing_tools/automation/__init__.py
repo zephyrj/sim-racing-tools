@@ -8,7 +8,7 @@ import sim_racing_tools.utils as utils
 from automation.car_file_decoder import CarFile
 from automation.jbeam import Parser as JBeamParser
 
-from assetto_corsa.car.engine import Engine, TurboSection, FROM_COAST_REF
+from assetto_corsa.car.engine import Engine, TurboSection, FROM_COAST_REF, EngineSources
 
 
 def generate_assetto_corsa_engine_data(exported_car_name):
@@ -36,7 +36,9 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     jbeam_engine_data = p.naive_parse(os.path.join(data_dir, installation.ENGINE_JBEAM_NAME))
 
     engine = Engine()
-    engine.mass_kg = round(engine_data["Weight"])
+    engine.metadata.source = EngineSources.AUTOMATION
+    engine.metadata.mass_kg = round(engine_data["Weight"])
+    engine.metadata.info_dict["automation-version"] = engine_data["GameVersion"]
 
     # engine.max_power = (round(engine_data["PeakPower"]), round(engine_data["PeakPowerRPM"]))
     # engine.max_torque = (round(engine_data["PeakTorque"]), round(engine_data["PeakTorqueRPM"]))
@@ -68,6 +70,8 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     else:
         write_turbo_torque_curve(engine, engine_data)
         create_turbo_sections(engine, engine_data)
+        engine.metadata.boost_curve = {round(rpm): engine_data["boost-curve"][idx]
+                                       for idx, rpm in enumerate(engine_data["rpm-curve"])}
 
     rpm_increments = engine_data["rpm-curve"][-1] - engine_data["rpm-curve"][-2]
     engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][-1]+rpm_increments))
@@ -79,10 +83,6 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     angular_velocity_at_max_rpm = (engine_data["MaxRPM"] * 2 * math.pi) / 60
     friction_torque = (angular_velocity_at_max_rpm * dynamic_friction) + \
                       (2*jbeam_engine_data["Camso_Engine"]["mainEngine"]["friction"])
-
-    with open("boost.lut", "w+") as f:
-        for idx, rpm in enumerate(engine_data["rpm-curve"]):
-            f.write(f'{round(rpm)}|{engine_data["boost-curve"][idx]}\n')
 
     engine.coast_curve.curve_data_source = FROM_COAST_REF
     engine.coast_curve.reference_rpm = round(engine_data["MaxRPM"])

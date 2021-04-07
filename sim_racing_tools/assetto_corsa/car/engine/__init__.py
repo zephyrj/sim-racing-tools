@@ -1,5 +1,6 @@
 import toml
 import os
+import csv
 
 from typing import List
 from sim_racing_tools.utils import IniObj, extract_ini_primitive_value
@@ -9,6 +10,9 @@ TURBO = "turbo"
 
 FROM_COAST_REF = "FROM_COAST_REF"
 
+METADATA_FILENAME = "metadata.toml"
+BOOST_FILENAME = "boost.csv"
+
 
 def load_engine(engine_ini_path):
     e = Engine()
@@ -17,11 +21,52 @@ def load_engine(engine_ini_path):
     return e
 
 
+class EngineSources(object):
+    ASSETTO_CORSA = "ac"
+    AUTOMATION = "automation"
+
+
+class EngineMetadata(object):
+    def __init__(self):
+        self.source = None
+        self.mass_kg: int or None = None
+        self.boost_curve = dict()
+        self.info_dict = dict()
+
+    def load(self, data_dir):
+        metadata_path = os.path.join(data_dir, METADATA_FILENAME)
+        if os.path.isfile(metadata_path):
+            with open(metadata_path, "r") as f:
+                data_dict = toml.load(f)
+                for a in ["source", "mass_kg", "info_dict"]:
+                    if a in data_dict:
+                        setattr(self, a, data_dict[a])
+        boost_filepath = os.path.join(data_dir, BOOST_FILENAME)
+        if os.path.isfile(boost_filepath):
+            with open(boost_filepath, "r") as f:
+                self.boost_curve = {row["rpm"]: row["boost_bar"] for row in csv.DictReader(f, delimiter=',')}
+
+    def write(self, output_dir):
+        self._write_metadate_file(output_dir)
+        self._write_boost_curve(output_dir)
+
+    def _write_metadate_file(self, output_dir):
+        with open(os.path.join(output_dir, METADATA_FILENAME), "w+") as f:
+            toml.dump({"source": self.source, "mass_kg": self.mass_kg, "info_dict": self.info_dict}, f)
+
+    def _write_boost_curve(self, output_dir):
+        if self.boost_curve:
+            with open(os.path.join(output_dir, BOOST_FILENAME), "w+") as f:
+                f.write("rpm,boost_bar\n")
+                for rpm, boost_bar in self.boost_curve.items():
+                    f.write(f'{round(rpm)},{boost_bar}\n')
+
+
 class Engine(object):
     def __init__(self):
+        self.metadata: EngineMetadata = EngineMetadata()
         self.ini_data = None
         self.version = 1  # The version of the assetto corsa ini file to output
-        self.mass_kg: None or int = None  # sql Variants.Weight
         self.fuel_consumption: None or int = None
 
         self.power_info: Power = Power()
@@ -40,6 +85,7 @@ class Engine(object):
         self.rpm_damage_k = 1  # amount of damage per second per (max - threshold)
 
     def load_settings_from_ini(self, ini_data):
+        self.metadata.load(ini_data.dirname())
         self.ini_data = ini_data
         self.version = extract_ini_primitive_value(ini_data["HEADER"]["VERSION"], int)
         self.altitude_sensitivity = extract_ini_primitive_value(ini_data["ENGINE_DATA"]["ALTITUDE_SENSITIVITY"], float)
@@ -58,6 +104,7 @@ class Engine(object):
         if output_path is None and self.ini_data is None:
             raise IOError("No output file specified")
         ini_data = IniObj(output_path) if output_path else self.ini_data
+        self.metadata.write(ini_data.dirname())
         if "HEADER" not in ini_data:
             ini_data["HEADER"] = dict()
         ini_data["HEADER"]["VERSION"] = self.version
@@ -180,7 +227,7 @@ class CoastCurve(object):
             ini_data["COAST_REF"] = dict()
         ini_data["COAST_REF"]["RPM"] = self.reference_rpm
         ini_data["COAST_REF"]["TORQUE"] = self.torque
-        ini_data["COAST_REF"]["NON_LINEARITY"]= self.non_linearity
+        ini_data["COAST_REF"]["NON_LINEARITY"] = self.non_linearity
 
 
 class Turbo(object):
