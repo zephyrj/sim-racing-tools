@@ -58,7 +58,16 @@ def get_engine_data(variant_uid):
                                       installation.SANDBOX_DB_NAME)) as conn:
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        row = cur.execute('SELECT * from Variants where uid = ?', (variant_uid,)).fetchone()
+        variant_columns = ["UID", "FUID", "Name", "GameVersion", "Crank", "Conrods", "Pistons", "VVT", "Aspiration",
+                           "AspirationType", "AspirationOption", "IntercoolerSetting", "FuelSystemType", "FuelSystem",
+                           "IntakeManifold", "Intake", "FuelType", "Headers", "ExhaustCount", "ExhaustBypassValves",
+                           "Cat", "Muffler1", "Muffler2", "Bore", "Stroke", "Capacity", "Compression",
+                           "CamProfileSetting", "VVLCamProfileSetting", "AFR", "AFRLean", "RPMLimit",
+                           "IgnitionTimingSetting", "ARRatio", "BoostCutOff", "CompressorFraction", "TurbineFraction",
+                           "ExhaustDiameter", "QualityBottomEnd", "QualityTopEnd", "QualityAspiration",
+                           "QualityFuelSystem", "QualityExhaust", "Tags"]
+        query = f"SELECT {', '.join(variant_columns)} from Variants where uid = ?"
+        row = cur.execute(query, (variant_uid,)).fetchone()
         data_dict = {k: row[k] for k in row.keys()}
         data_dict["FamilyName"] = cur.execute('SELECT Name from Families where uid = ?',
                                               (data_dict['FUID'],)).fetchone()["Name"]
