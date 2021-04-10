@@ -6,6 +6,7 @@ import toml
 import logging
 
 from collections import OrderedDict
+import sim_racing_tools.automation.installation as installation
 
 SAMPLE_VARIANT_UID = 'B70604DD4EF0BE1E016E1F9559D67659'
 SANDBOX_DB_FILE_PATH = None
@@ -23,7 +24,7 @@ class SQLiteColumn(object):
 
 
 def load_engine_results_schema():
-    with sqlite3.connect(SANDBOX_DB_FILE_PATH) as conn:
+    with sqlite3.connect(installation.get_sandbox_db_path()) as conn:
         cur = conn.cursor()
         for row in cur.execute('PRAGMA table_info("EngineResults")').fetchall():
             a = SQLiteColumn()
@@ -36,7 +37,7 @@ def get_resource_data(variant_uid):
     resource_stats_to_collect = ["EngineeringCost", "EngineeringTime", "ManHours",
                                  "MaterialCost", "ToolingCosts", "TotalCost"]
     data_dict = OrderedDict()
-    with sqlite3.connect(SANDBOX_DB_FILE_PATH) as conn:
+    with sqlite3.connect(installation.get_sandbox_db_path()) as conn:
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
         row = cur.execute('SELECT * FROM EngineResults WHERE UID = ?', (variant_uid,)).fetchone()
@@ -77,7 +78,7 @@ def _decode_blob(blob_bytes):
 
 
 def get_engine_graph_data(variant_uid):
-    with sqlite3.connect(SANDBOX_DB_FILE_PATH) as conn:
+    with sqlite3.connect(installation.get_sandbox_db_path()) as conn:
         conn.row_factory = sqlite3.Row
         conn.text_factory = bytes
         cur = conn.cursor()
@@ -106,5 +107,6 @@ def write_engine_performance_summary(variant_uid, out_file):
 
 
 if __name__ == '__main__':
+    print(installation.get_sandbox_db_path())
     write_resource_summary(sys.argv[1], "resource_summary.toml")
     write_engine_performance_summary(sys.argv[1], "performance_summary.toml")

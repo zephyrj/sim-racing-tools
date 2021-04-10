@@ -38,6 +38,10 @@ def get_userdata_path():
     return os.path.join(get_user_documents_dir(), USER_GAME_DATA_PATH)
 
 
+def get_sandbox_db_path():
+    return os.path.join(get_userdata_path(), SANDBOX_DB_NAME)
+
+
 def get_beamng_export_path():
     return os.path.join(get_user_documents_dir(), BEAMNG_EXPORT_PATH)
 
