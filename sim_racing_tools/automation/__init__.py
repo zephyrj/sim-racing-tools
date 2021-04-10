@@ -43,6 +43,7 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     engine.metadata.source = EngineSources.AUTOMATION
     engine.metadata.mass_kg = round(engine_data["Weight"])
     engine.metadata.info_dict["automation-version"] = engine_data["GameVersion"]
+    engine.metadata.info_dict["automation-data"] = engine_data
     ui_data = EngineUIData()
     ui_data.torque_curve = [[str(round(rpm)), str(round(engine_data["torque-curve"][idx]))]
                             for idx, rpm in enumerate(engine_data["rpm-curve"])]
@@ -52,8 +53,6 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     ui_data.max_power = f"{round(kw_to_bhp(engine_data['PeakPower']))}bhp"
     engine.metadata.ui_data = ui_data
 
-    # engine.max_power = (round(engine_data["PeakPower"]), round(engine_data["PeakPowerRPM"]))
-    # engine.max_torque = (round(engine_data["PeakTorque"]), round(engine_data["PeakTorqueRPM"]))
     engine.inertia = round(jbeam_engine_data["Camso_Engine"]["mainEngine"]["inertia"], 3)
     engine.minimum = round(engine_data["IdleSpeed"] if engine_data["IdleSpeed"] >= engine_data["rpm-curve"][0] else engine_data["rpm-curve"][0])
     engine.limiter = round(engine_data["MaxRPM"])
@@ -73,9 +72,10 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     # fuel_use_per_sec = (engine_data["PeakPowerRPM"] * 1 * C) / 1000
     # fuel_use_per_sec * 1000 =  engine_data["PeakPowerRPM"]*C
     # C = (fuel_use_per_sec * 1000) / engine_data["PeakPowerRPM"]
-    # This is being generous for now as the Econ value doesn't apply for MaxPower
-    # we can look up the econ value @ Max power later
-    # TODO refine this to get an average over a wider range of engine usage
+    # In theory this is being generous as the Econ value is an average over all engine RPMs
+    # rather than the consumption at max power but the values still seem to be higher than
+    # the values of other AC engines
+    # TODO refine this
     engine.fuel_consumption = round((fuel_use_per_sec * 1000) / engine_data["PeakPowerRPM"], 4)
 
     if engine_data["AspirationType"].startswith("Aspiration_Natural"):
@@ -140,6 +140,6 @@ def create_turbo_sections(engine, engine_data):
     t.reference_rpm = round(engine_data["PeakBoostRPM"])
     # TODO work out how to better approximate these
     t.lag_dn = 0.99
-    t.lag_up = 0.995
-    t.gamma = 1
+    t.lag_up = 0.965
+    t.gamma = 2.5
     engine.turbo.sections.append(t)
