@@ -20,7 +20,7 @@ class NoSuchCar(ValueError):
 def load_car(car_folder_name):
     ac_install = installation.Installation()
     if car_folder_name not in ac_install.installed_cars:
-        return
+        raise NoSuchCar(car_folder_name)
     c = Car()
     c.load_from_path(os.path.join(ac_install.get_installed_cars_path(), car_folder_name))
     return c
