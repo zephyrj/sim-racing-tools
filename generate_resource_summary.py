@@ -107,6 +107,5 @@ def write_engine_performance_summary(variant_uid, out_file):
 
 
 if __name__ == '__main__':
-    print(installation.get_sandbox_db_path())
     write_resource_summary(sys.argv[1], "resource_summary.toml")
     write_engine_performance_summary(sys.argv[1], "performance_summary.toml")
