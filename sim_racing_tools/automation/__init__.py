@@ -63,7 +63,8 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     # TODO work out some kind of translation from MTTF to this
     engine.rpm_damage_k = 1
 
-    # fuel use in l/h = (Max Power * Max RPM) / fuel density
+    # From https://buildingclub.info/calculator/g-kwh-to-l-h-online-from-gram-kwh-to-liters-per-hour/
+    # Fuel Use (l/h) = (Engine Power (kW) * BSFC@Power) / Fuel density kg/m3
     fuel_use_per_hour = (engine_data["PeakPower"] * engine_data["Econ"]) / 750
     fuel_use_per_sec = fuel_use_per_hour / 3600
 
@@ -75,7 +76,7 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     # This is being generous for now as the Econ value doesn't apply for MaxPower
     # we can look up the econ value @ Max power later
     # TODO refine this to get an average over a wider range of engine usage
-    engine.fuel_consumption = round((fuel_use_per_sec * 1000) / engine_data["PeakPowerRPM"], 3)
+    engine.fuel_consumption = round((fuel_use_per_sec * 1000) / engine_data["PeakPowerRPM"], 4)
 
     if engine_data["AspirationType"].startswith("Aspiration_Natural"):
         write_na_torque_curve(engine, engine_data)
@@ -91,6 +92,20 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][-1] + (rpm_increments*2)))
     engine.power_info.torque_curve.append(0)
 
+    """
+    The following data is available from the engine.jbeam exported file
+    The dynamic friction torque on the engine in Nm/s.
+    This is a friction torque which increases proportional to engine AV (rad/s).
+    AV = (2pi * RPM) / 60
+    friction torque = (AV * dynamicFriction) + 2*staticFriction
+    dynamicFriction = brakingcoefRPS/2pi from pre 0.7.2.
+    So dynamicFriction*2pi = braking_coefficientRPS
+    friction torque = (ref_rpm * (brakingCoefficientRPS / 60)) + staticFriction
+
+    #### NOTE ####
+    I'm assuming that all of the sources of friction are being taken into account in the BeamNG parameters used above
+    this may not be correct.
+    """
     dynamic_friction = jbeam_engine_data["Camso_Engine"]["mainEngine"]["dynamicFriction"]
     angular_velocity_at_max_rpm = (engine_data["MaxRPM"] * 2 * math.pi) / 60
     friction_torque = (angular_velocity_at_max_rpm * dynamic_friction) + \

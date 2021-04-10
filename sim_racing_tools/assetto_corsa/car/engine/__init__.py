@@ -208,34 +208,16 @@ class Power(object):
 
 class CoastCurve(object):
     """
-     Engine braking (coast) will come from 2 things:
-      1 - Friction from the engine
-          The following data is available from the engine.jbeam exported file
-          The dynamic friction torque on the engine in Nm/s.
-          This is a friction torque which increases proportional to engine AV (rad/s).
-          AV = (2pi * RPM) / 60
-          friction torque = (AV * dynamicFriction) + 2*staticFriction
-          dynamicFriction = brakingcoefRPS/2pi from pre 0.7.2.
-          So dynamicFriction*2pi = braking_coefficientRPS
-          friction torque = (ref_rpm * (brakingCoefficientRPS / 60)) + staticFriction
-
-      #### NOTE ####
-      For now we are only going to consider the friction as this is easier to derive from the
-      BeamNG data we have
-
-      2 - the engines attempt to suck in air when the butterfly valve is closed where a near vacuum occurs.
-          This is a very rough approximation based on the stackoverflow answer:
-
-          the "I have no idea what I'm doing" dog meme has never been more appropriate
-          W (j) = difference in pressure (pa) x volume displaced (m3)
-          Vacuum pressure (https://www.engineeringtoolbox.com/vacuum-converter-d_460.html)
-          Atmospheric pressure = 101325pa
-          95% vacuum = 5000pa
-          work_done_by_one_intake_stroke = (Atmospheric pressure - Vacuum pressure) x engine_cc
-
-          1000 rpm = 16.6 rps = 8.3 intake strokes per second
-          work_done@1000RPM = 8.3 x work_done_by_one_intake_stroke (Watts)
-          torque = (9.554140127 * watts) / RPM
+    From https://en.wikipedia.org/wiki/Engine_efficiency
+    An engine has many moving parts that produce friction. Some of these friction forces remain constant
+    (as long as applied load is constant); some of these friction losses increase as engine speed increases,
+    such as piston side forces and connecting bearing forces (due to increased inertia forces from the oscillating piston).
+    A few friction forces decrease at higher speed, such as the friction force on the cam's lobes used to operate
+    the inlet and outlet valves (the valves' inertia at high speed tends to pull the cam follower away from the cam lobe).
+    Along with friction forces, an operating engine has pumping losses, which is the work required to move air into
+    and out of the cylinders. This pumping loss is minimal at low speed, but increases approximately as the square of the
+    speed, until at rated power an engine is using about 20% of total power production to overcome
+    friction and pumping losses.
     """
     def __init__(self):
         # TODO this assumes coast is defined by COAST_REF
@@ -371,3 +353,49 @@ class TurboSection(object):
         ini_data[turbo_section_name]["REFERENCE_RPM"] = self.reference_rpm
         ini_data[turbo_section_name]["GAMMA"] = self.gamma
         ini_data[turbo_section_name]["COCKPIT_ADJUSTABLE"] = self.cockpit_adjustable
+
+
+"""
+Other formulas found on the web:
+
+Friction calculations from:
+https://www.eng-tips.com/viewthread.cfm?qid=83632
+
+Input:
+RPM = 8500
+CID = 355
+Stroke = 3.480
+
+FHP = ((RPM ^ 2) * Stroke * CID) / ((13.7 / ((Stroke ^ .3333) * (RPM ^ .25))) * 350000000)
+Should give you 270.8 FHP
+
+pspeed = rpm * stroke * .16666667#
+factor = 1.4105813# + 1.3602189# * COS(.0001257675# * pspeed + 3.2909413#)
+ftq = factor * cid
+fhp = (ftq * rpm) / 5252
+should give you 249.1 FHP
+
+FMEP calculations found online
+I.P = (Pmep * L * A * N * k) / 60
+I.P = Indicated Power (kW)
+L and A = Stroke length and Area of cross section
+N = RPM
+k = 1/2 for 2 stroke and 1/4 for 4 stroke
+
+Chen-Flynn friction correlation model
+FMEP = (2pi*nr*T) / Vd
+
+the engines attempt to suck in air when the butterfly valve is closed where a near vacuum occurs.
+This is a very rough approximation based on the stackoverflow answer:
+
+the "I have no idea what I'm doing" dog meme has never been more appropriate
+W (j) = difference in pressure (pa) x volume displaced (m3)
+Vacuum pressure (https://www.engineeringtoolbox.com/vacuum-converter-d_460.html)
+Atmospheric pressure = 101325pa
+90% vacuum = 10000pa
+work_done_by_one_intake_stroke = (Atmospheric pressure - Vacuum pressure) x engine_cc
+
+1000 rpm = 16.6 rps = 8.3 intake strokes per second
+work_done@1000RPM = 8.3 x work_done_by_one_intake_stroke (Watts)
+torque = (9.554140127 * watts) / RPM
+"""
