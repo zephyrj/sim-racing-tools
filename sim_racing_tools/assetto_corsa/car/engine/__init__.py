@@ -137,7 +137,7 @@ class Engine(object):
     def write(self, output_path=None):
         if output_path is None and self.ini_data is None:
             raise IOError("No output file specified")
-        ini_data = IniObj(output_path) if output_path else self.ini_data
+        ini_data = IniObj(os.path.join(output_path, "engine.ini")) if output_path else self.ini_data
         self.metadata.write(ini_data.dirname())
         if "HEADER" not in ini_data:
             ini_data["HEADER"] = dict()
@@ -162,27 +162,6 @@ class Engine(object):
         if self.turbo.is_present():
             return TURBO
         return NATURALLY_ASPIRATED
-
-    def max_power_stats(self):
-        # sql Variants.PeakPower - needs converting from KW
-        # sql Variants.PeakPowerRPM
-        self.max_power: dict[int, int] = {}  # hp at rpm
-
-    def max_torque_stats(self):
-        # sql Variants.PeakTorque
-        # sql Variants.PeakTorqueRPM
-        self.max_torque: dict[int, int] = {}  # Nm at rpm
-
-    def to_toml(self):
-        return toml.dumps({"mass_kg": self.mass_kg,
-                           "max_power": f"{self.max_power[0]}@{self.max_power[1]}",
-                           "max_torque": f"{self.max_torque[0]}@{self.max_torque[1]}",
-                           "inertia": self.inertia,
-                           "idle_rpm": self.minimum,
-                           "max_rpm": self.limiter,
-                           "fuel_consumption_constant": self.fuel_consumption,
-                           "coast_curve_info": f"Ref RPM: {self.coast_curve.reference_rpm} "
-                                               f"Torque: {self.coast_curve.torque}"})
 
 
 class Power(object):

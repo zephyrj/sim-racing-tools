@@ -39,7 +39,7 @@ class Drivetrain(object):
         if output_path is None and self.ini_data is None:
             raise IOError("No output file specified")
 
-        ini_data = IniObj(output_path) if output_path else self.ini_data
+        ini_data = IniObj(os.path.join(output_path, "drivetrain.ini")) if output_path else self.ini_data
         if "HEADER" not in ini_data:
             ini_data["HEADER"] = dict()
         ini_data["HEADER"]["VERSION"] = self.version

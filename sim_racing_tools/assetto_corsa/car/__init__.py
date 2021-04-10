@@ -257,8 +257,8 @@ class Car(object):
         ini_data.update_attribute("MAX_FUEL", self.max_fuel, section_name="FUEL")
         ini_data.write()
         self._write_ai_data(ini_data.dirname())
-        self.engine.write(os.path.join(ini_data.dirname(), "engine.ini"))
-        self.drivetrain.write(os.path.join(ini_data.dirname(), "drivetrain.ini"))
+        self.engine.write(ini_data.dirname())
+        self.drivetrain.write(ini_data.dirname())
         self.shift_lights.write(ini_data.dirname())
         self.ui_info.write(self.car_path if not output_path else output_path)
 
