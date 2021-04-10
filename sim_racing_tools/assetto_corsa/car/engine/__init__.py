@@ -74,7 +74,8 @@ class EngineMetadata(object):
         boost_filepath = os.path.join(data_dir, BOOST_FILENAME)
         if os.path.isfile(boost_filepath):
             with open(boost_filepath, "r") as f:
-                self.boost_curve = {row["rpm"]: row["boost_bar"] for row in csv.DictReader(f, delimiter=',')}
+                self.boost_curve = {int(row["rpm"]): float(row["boost_bar"])
+                                    for row in csv.DictReader(f, delimiter=',')}
 
     def write(self, output_dir):
         self._write_metadate_file(output_dir)
@@ -117,6 +118,9 @@ class Engine(object):
 
         self.rpm_threshold = 0  # RPM at which the engine starts to take damage
         self.rpm_damage_k = 1  # amount of damage per second per (max - threshold)
+
+    def load_from_dir(self, dir_name):
+        self.load_settings_from_ini(IniObj(os.path.join(dir_name, "engine.ini")))
 
     def load_settings_from_ini(self, ini_data):
         self.metadata.load(ini_data.dirname())
