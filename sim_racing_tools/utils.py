@@ -96,6 +96,15 @@ class IniObj(configobj.ConfigObj):
                                val,
                                self._decode_element(comment))
 
+    def _handle_comment(self, comment):
+        """Deal with a comment."""
+        if not comment:
+            return ''
+        start = self.indent_type
+        if not comment.startswith(';'):
+            start += self._a_to_u(' ; ')
+        return (start + comment)
+
     def write(self, outfile=None, section=None):
         if self.indent_type is None:
             # this can be true if initialised from a dictionary
@@ -103,7 +112,7 @@ class IniObj(configobj.ConfigObj):
 
         out = []
         cs = (self._a_to_u('#'), self._a_to_u(';'))
-        csp = self._a_to_u('# ')
+        csp = self._a_to_u('; ')
         if section is None:
             int_val = self.interpolation
             self.interpolation = False
