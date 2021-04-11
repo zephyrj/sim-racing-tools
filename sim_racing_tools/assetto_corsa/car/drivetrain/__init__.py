@@ -156,6 +156,8 @@ class Gearbox(object):
         ratio_files_map = dict()
         setup_ini = IniObj(setup_file)
         for idx in range(1, self.count+1):
+            if f"GEAR_{idx}" not in setup_ini:
+                continue
             ratio_file = extract_ini_primitive_value(setup_ini[f"GEAR_{idx}"]["RATIOS"])
             if ratio_file not in ratio_files_map:
                 ratio_files_map[ratio_file] = list()
