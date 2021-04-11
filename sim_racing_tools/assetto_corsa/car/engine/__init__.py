@@ -10,13 +10,22 @@ TURBO = "turbo"
 
 FROM_COAST_REF = "FROM_COAST_REF"
 
+ENGINE_INI_FILENAME = "engine.ini"
 METADATA_FILENAME = "engine-metadata.toml"
 BOOST_FILENAME = "boost.csv"
 
 
-def load_engine(engine_ini_path):
+class NoEngineIni(ValueError):
+    def __init__(self, path):
+        super(NoEngineIni, self).__init__(f"There is no {ENGINE_INI_FILENAME} file within {path}")
+
+
+def load_engine(engine_path):
     e = Engine()
-    engine_ini_data = IniObj(engine_ini_path)
+    ini_path = os.path.join(engine_path, ENGINE_INI_FILENAME)
+    if not os.path.isfile(ini_path):
+        raise NoEngineIni(engine_path)
+    engine_ini_data = IniObj(ini_path)
     e.load_settings_from_ini(engine_ini_data)
     return e
 

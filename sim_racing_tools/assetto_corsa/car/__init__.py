@@ -204,7 +204,7 @@ class Car(object):
         self.default_fuel = extract_ini_primitive_value(ini_data["FUEL"]["FUEL"], int)
         self.max_fuel = extract_ini_primitive_value(ini_data["FUEL"]["MAX_FUEL"], int)
         self._load_ai_data()
-        self.engine = engine.load_engine(os.path.join(self.data_path, "engine.ini"))
+        self.engine = engine.load_engine(self.data_path)
         self.drivetrain = drivetrain.load_drivetrain(os.path.join(self.data_path, "drivetrain.ini"))
         self.shift_lights.load_from_ini(self.data_path)
         self.car_ini_data = ini_data
