@@ -4,7 +4,8 @@ import shutil
 import json
 
 import sim_racing_tools.utils as utils
-from sim_racing_tools.utils import extract_ini_primitive_value
+import sim_racing_tools.assetto_corsa.utils as ac_utils
+from sim_racing_tools.assetto_corsa.utils import extract_ini_primitive_value
 import sim_racing_tools.assetto_corsa.installation as installation
 import sim_racing_tools.assetto_corsa.car.engine as engine
 import assetto_corsa.car.drivetrain as drivetrain
@@ -93,13 +94,13 @@ def _update_filenames_and_references(new_car_path: str,
                 logging.info(f"Renaming {full_file_path} to {new_file_path}")
                 os.rename(full_file_path, new_file_path)
             elif filename == "car.ini":
-                config = utils.IniObj(full_file_path)
+                config = ac_utils.IniObj(full_file_path)
                 new_screen_name = f'{brand} {model}'
                 logging.info(f"Updating SCREEN_NAME in car.ini to {new_screen_name}")
                 config["INFO"]["SCREEN_NAME"] = new_screen_name
                 config.write()
             elif filename == "lods.ini":
-                config = utils.IniObj(full_file_path)
+                config = ac_utils.IniObj(full_file_path)
                 idx = 0
                 while True:
                     current_lod_name = f'LOD_{idx}'
@@ -201,7 +202,7 @@ class Car(object):
     def load_from_path(self, car_path):
         self.car_path = car_path
         self.data_path = os.path.join(car_path, "data")
-        ini_data = utils.IniObj(os.path.join(self.data_path, "car.ini"))
+        ini_data = ac_utils.IniObj(os.path.join(self.data_path, "car.ini"))
         self.version = extract_ini_primitive_value(ini_data["HEADER"]["VERSION"], int)
         self.screen_name = ini_data["INFO"]["SCREEN_NAME"]
         self.total_mass = extract_ini_primitive_value(ini_data["BASIC"]["TOTALMASS"], int)
@@ -263,7 +264,7 @@ class Car(object):
     def write(self, output_path=None):
         if output_path is None and self.car_ini_data is None:
             raise IOError("No output file specified")
-        ini_data = utils.IniObj(output_path) if output_path else self.car_ini_data
+        ini_data = ac_utils.IniObj(output_path) if output_path else self.car_ini_data
         ini_data.update_attribute("VERSION", self.version, section_name="HEADER")
         ini_data.update_attribute("SCREEN_NAME", self.screen_name, section_name="INFO")
         ini_data.update_attribute("TOTALMASS", self.total_mass, section_name="BASIC")
@@ -279,12 +280,12 @@ class Car(object):
 
     def _load_ai_data(self):
         ai_file_path = os.path.join(self.data_path, "ai.ini")
-        ai_ini = utils.IniObj(ai_file_path)
+        ai_ini = ac_utils.IniObj(ai_file_path)
         self.ai_shift_up = extract_ini_primitive_value(ai_ini["GEARS"]["UP"], int)
         self.ai_shift_down = extract_ini_primitive_value(ai_ini["GEARS"]["DOWN"], int)
 
     def _write_ai_data(self, output_dir):
-        ai_ini = utils.IniObj(os.path.join(output_dir, "ai.ini"))
+        ai_ini = ac_utils.IniObj(os.path.join(output_dir, "ai.ini"))
         ai_ini.update_attribute("UP", self.ai_shift_up, section_name="GEARS")
         ai_ini.update_attribute("DOWN", self.ai_shift_down, section_name="GEARS")
         ai_ini.write()
@@ -298,7 +299,7 @@ class ShiftLights(object):
         instruments_path = os.path.join(ini_dir, "digital_instruments.ini")
         if not os.path.isfile(instruments_path):
             return
-        instruments_ini = utils.IniObj(instruments_path)
+        instruments_ini = ac_utils.IniObj(instruments_path)
         led_idx = 0
         while True:
             led_section_name = f"LED_{led_idx}"
@@ -316,7 +317,7 @@ class ShiftLights(object):
             rpm_switch_val -= 100
 
     def write(self, output_path):
-        ini_file = utils.IniObj(os.path.join(output_path, "digital_instruments.ini"))
+        ini_file = ac_utils.IniObj(os.path.join(output_path, "digital_instruments.ini"))
         for led_idx, led in enumerate(self.leds):
             led_section_name = f"LED_{led_idx}"
             if led_section_name not in ini_file:

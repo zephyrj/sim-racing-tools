@@ -3,7 +3,7 @@ import os
 import csv
 
 from typing import List
-from sim_racing_tools.utils import IniObj, extract_ini_primitive_value
+from sim_racing_tools.assetto_corsa.utils import IniObj, extract_ini_primitive_value
 
 NATURALLY_ASPIRATED = "n/a"
 TURBO = "turbo"

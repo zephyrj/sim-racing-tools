@@ -1,6 +1,6 @@
 import os
 from typing import List
-from sim_racing_tools.utils import IniObj, extract_ini_primitive_value
+from sim_racing_tools.assetto_corsa.utils import IniObj, extract_ini_primitive_value
 
 
 def load_drivetrain(drivetrain_ini_path):
