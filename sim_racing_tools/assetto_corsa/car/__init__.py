@@ -17,6 +17,11 @@ class NoSuchCar(ValueError):
         super(NoSuchCar, self).__init__(f"No car exists with the name {car_name}")
 
 
+class CannotUpdateWeight(ValueError):
+    def __init__(self):
+        super(CannotUpdateWeight, self).__init__("Can't update car weight as no engine weight is available")
+
+
 def load_car(car_folder_name):
     ac_install = installation.Installation()
     if car_folder_name not in ac_install.installed_cars:
@@ -210,7 +215,7 @@ class Car(object):
         self.car_ini_data = ini_data
         self.ui_info.load(self.car_path)
 
-    def swap_engine(self, new_engine):
+    def swap_engine(self, new_engine, update_weight=False, old_engine_weight=None):
         """
         ai.ini:
         [GEARS]
@@ -231,9 +236,18 @@ class Car(object):
         [DOWNSHIFT_PROTECTION] (dependant on quality?)
 
         :param new_engine:
+        :param update_weight:
+        :param old_engine_weight:
         :return:
         """
+        if new_engine.metadata.mass_kg and update_weight:
+            old_weight = self.engine.metadata.mass_kg if self.engine.metadata.mass_kg else old_engine_weight
+            if not old_weight:
+                raise CannotUpdateWeight()
+            self.total_mass -= old_weight
+            self.total_mass += new_engine.metadata.mass_kg
         self.engine = new_engine
+
         if new_engine.fuel_consumption:
             self.fuel_consumption = new_engine.fuel_consumption
         if not self.data_path:
@@ -244,6 +258,7 @@ class Car(object):
             self.ui_info.powerCurve = new_engine.metadata.ui_data.power_curve
             self.ui_info.specs["bhp"] = new_engine.metadata.ui_data.max_power
             self.ui_info.specs["torque"] = new_engine.metadata.ui_data.max_torque
+            self.ui_info.specs["weight"] = self.total_mass
 
     def write(self, output_path=None):
         if output_path is None and self.car_ini_data is None:
