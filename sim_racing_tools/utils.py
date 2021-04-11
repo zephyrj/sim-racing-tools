@@ -81,6 +81,7 @@ class IniObj(configobj.ConfigObj):
     def __init__(self, *args, **kwargs):
         configobj.ConfigObj.__init__(self, *args, **kwargs)
         self.is_new_file = True if not os.path.isfile(self.filename) else False
+        self.comment_indent = "    "
         self._valueexp = IniObj._valueexp
 
     def _write_line(self, indent_string, entry, this_entry, comment):
@@ -100,7 +101,7 @@ class IniObj(configobj.ConfigObj):
         """Deal with a comment."""
         if not comment:
             return ''
-        start = self.indent_type
+        start = self.comment_indent
         if not comment.startswith(';'):
             start += self._a_to_u(' ; ')
         return (start + comment)
