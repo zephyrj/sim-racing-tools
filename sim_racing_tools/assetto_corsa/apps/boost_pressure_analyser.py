@@ -1,12 +1,24 @@
-# ##############################################################
-# # Kunos Simulazioni
-# # AC Python tutorial 04 : Get data from AC
-# #
-# # To activate create a folder with the same name as this file
-# # in apps/python. Ex apps/python/tutorial01
-# # Then copy this file inside it and launch AC
-# #############################################################
-#
+"""
+Copyright (c):
+2021 zephyrj
+zephyrj@protonmail.com
+
+This file is part of sim-racing-tools.
+
+sim-racing-tools is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+sim-racing-tools is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with sim-racing-tools. If not, see <https://www.gnu.org/licenses/>.
+"""
+
 import ac
 import acsys
 import sys
