@@ -40,6 +40,10 @@ def get_install_dir():
     return os.path.join(constants.get_game_install_path(), GAME_NAME)
 
 
+def get_cars_dir():
+    return Installation().get_installed_cars_path()
+
+
 class Installation(object):
     def __init__(self, custom_root=None):
         self.on_linux = sys.platform == "linux" or sys.platform == "linux2"
