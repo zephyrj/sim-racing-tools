@@ -1,7 +1,7 @@
 import setuptools
 
 version = {}
-with open("sim_racing_tools/_version.py") as fp:
+with open("sim_racing_tools/version.py") as fp:
     exec(fp.read(), version)
 
 with open("README.md", "r") as fh:
