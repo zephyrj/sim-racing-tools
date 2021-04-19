@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="Sim-racing-tools",
+    name="sim-racing-tools",
     version=version['__version__'],
     author="zephyrj",
     author_email="zephyrj@protonmail.com",
@@ -17,7 +17,6 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/zephyrj/sim-racing-tools",
     packages=setuptools.find_packages('.'),
-    package_dir={'': 'sim_racing_tools'},
     include_package_data=True,
     install_requires=['setuptools~=54.2.0',
                       'toml~=0.10.2',
