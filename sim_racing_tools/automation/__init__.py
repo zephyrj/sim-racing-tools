@@ -22,6 +22,7 @@ along with sim-racing-tools. If not, see <https://www.gnu.org/licenses/>.
 import os
 import glob
 import math
+import zipfile
 
 import automation.installation as installation
 import automation.sandbox as sandbox
@@ -40,7 +41,12 @@ def generate_assetto_corsa_engine_data(exported_car_name):
     car_export_path = os.path.join(installation.get_beamng_export_path(),
                                    exported_car_name)
     if not os.path.isdir(car_export_path):
-        raise IOError(f"No such directory: {car_export_path}")
+        zip_file_name = os.path.join(os.path.dirname(car_export_path), os.path.basename(car_export_path) + ".zip")
+        if os.path.isfile(zip_file_name):
+            with zipfile.ZipFile(car_export_path + ".zip", 'r') as zip_ref:
+                zip_ref.extractall(car_export_path)
+        else:
+            raise IOError(f"No such directory: {car_export_path}")
 
     data_dir = os.path.join(car_export_path,
                             os.sep.join(["vehicles", exported_car_name]))
