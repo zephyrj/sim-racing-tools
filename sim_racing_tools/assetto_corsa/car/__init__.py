@@ -39,9 +39,9 @@ class NoSuchCar(ValueError):
         super(NoSuchCar, self).__init__(f"No car exists with the name {car_name}")
 
 
-class CannotUpdateWeight(ValueError):
+class CannotUpdateMass(ValueError):
     def __init__(self):
-        super(CannotUpdateWeight, self).__init__("Can't update car weight as no engine weight is available")
+        super(CannotUpdateMass, self).__init__("Can't update car weight as no engine weight is available")
 
 
 def load_car(car_folder_name):
@@ -237,7 +237,7 @@ class Car(object):
         self.car_ini_data = ini_data
         self.ui_info.load(self.car_path)
 
-    def swap_engine(self, new_engine, update_weight=False, old_engine_weight=None):
+    def swap_engine(self, new_engine, update_mass=False, old_engine_mass=None):
         """
         ai.ini:
         [GEARS]
@@ -257,16 +257,27 @@ class Car(object):
         [AUTO_SHIFTER]
         [DOWNSHIFT_PROTECTION] (dependant on quality?)
 
+        TODO
+        ctrl_turbo0.ini
+        [CONTROLLER_0]
+        INPUT=RPMS
+        COMBINATOR=ADD
+        LUT=(0=2.0|3500=2.0|6400=1.95|6600=1.91|6800=1.85|7000=1.82|7200=1.8|7400=1.76|7600=1.73|7800=1.69|8000=1.64|8200=1.59|8400=1.53|8600=1.48|8800=1.42|9000=1.37)
+        FILTER=0.99     ; new value each physics step = filter*last_step_value+(1-filter)*lut_value
+        UP_LIMIT=10000
+        DOWN_LIMIT=0.0
+
+
         :param new_engine:
-        :param update_weight:
-        :param old_engine_weight:
+        :param update_mass:
+        :param old_engine_mass:
         :return:
         """
-        if new_engine.metadata.mass_kg and update_weight:
-            old_weight = self.engine.metadata.mass_kg if self.engine.metadata.mass_kg else old_engine_weight
-            if not old_weight:
-                raise CannotUpdateWeight()
-            self.total_mass -= old_weight
+        if new_engine.metadata.mass_kg and update_mass:
+            old_mass = self.engine.metadata.mass_kg if self.engine.metadata.mass_kg else old_engine_mass
+            if not old_mass:
+                raise CannotUpdateMass()
+            self.total_mass -= old_mass
             self.total_mass += new_engine.metadata.mass_kg
         self.engine = new_engine
 
