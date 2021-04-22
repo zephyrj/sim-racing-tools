@@ -155,7 +155,7 @@ class Engine(object):
     def load_settings_from_ini(self, ini_data):
         self.metadata.load(ini_data.dirname())
         self.ini_data = ini_data
-        self.version = extract_ini_primitive_value(ini_data["HEADER"]["VERSION"], int)
+        self.version = ini_data["HEADER"]["VERSION"]
         self.altitude_sensitivity = extract_ini_primitive_value(ini_data["ENGINE_DATA"]["ALTITUDE_SENSITIVITY"], float)
         self.inertia = extract_ini_primitive_value(ini_data["ENGINE_DATA"]["INERTIA"], float)
         self.limiter = extract_ini_primitive_value(ini_data["ENGINE_DATA"]["LIMITER"], int)

@@ -18,8 +18,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with sim-racing-tools. If not, see <https://www.gnu.org/licenses/>.
 """
-
+import os
 import re
+import zipfile
 import decimal
 
 
@@ -48,3 +49,15 @@ def round_up(x, place=0):
     rounded = round(decimal.Decimal(str(x)), place)
     context.rounding = original_rounding
     return float(rounded)
+
+
+def kw_to_bhp(kw):
+    return kw / 0.745699872
+
+
+def unzip_file(zip_file_path):
+    if os.path.isfile(zip_file_path):
+        with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+            zip_ref.extractall(os.path.dirname(zip_file_path))
+    else:
+        raise IOError(f"No such file: {zip_file_path}")
