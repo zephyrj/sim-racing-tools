@@ -191,7 +191,7 @@ class Car(object):
         self.data_path = None
         self.car_ini_data = None
         self.ui_info = UIInfo()
-        self.version: int = 1
+        self.version: str = '1'
         self.screen_name: str = ""
         self.total_mass: int = 0  # total vehicle weight in kg with driver and no fuel
         '''
@@ -224,7 +224,7 @@ class Car(object):
         self.car_path = car_path
         self.data_path = os.path.join(car_path, "data")
         ini_data = ac_utils.IniObj(os.path.join(self.data_path, "car.ini"))
-        self.version = extract_ini_primitive_value(ini_data["HEADER"]["VERSION"], int)
+        self.version = ini_data["HEADER"]["VERSION"]
         self.screen_name = ini_data["INFO"]["SCREEN_NAME"]
         self.total_mass = extract_ini_primitive_value(ini_data["BASIC"]["TOTALMASS"], int)
         self.fuel_consumption = extract_ini_primitive_value(ini_data["FUEL"]["CONSUMPTION"], float)

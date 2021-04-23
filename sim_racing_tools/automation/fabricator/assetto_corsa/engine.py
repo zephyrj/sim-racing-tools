@@ -77,8 +77,9 @@ version_to_parameter_selector = {1: EngineParameterCalculatorV1}
 
 
 class DefaultEngineFabricator(object):
-    def __init__(self, version=None):
+    def __init__(self, version=None, use_csp_physics_extensions=False):
         self.version = LATEST_VERSION if not version else version
+        self.use_csp_physics_extensions = use_csp_physics_extensions
 
     def create_from_beamng_mod(self, beamng_mod_folder_name):
         data_dir = get_mod_data_dir(beamng_mod_folder_name)

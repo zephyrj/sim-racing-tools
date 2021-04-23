@@ -31,6 +31,8 @@ parser_swap_engine.add_argument("--mass-hint", type=int,
                                      "for the old engine if you want to update the car mass. The value "
                                      "of this parameter will be used as the old engine mass in this "
                                      "scenario - the values unit is Kg")
+parser_swap_engine.add_argument('-c', '--use-csp-physics', action="store_true",
+                                help="Allow use of custom shader patch physics extensions when creating engine data")
 argcomplete.autocomplete(parser)
 
 import sys

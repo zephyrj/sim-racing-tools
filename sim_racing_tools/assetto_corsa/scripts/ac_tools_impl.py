@@ -19,9 +19,11 @@ def clone_car(args):
 def swap_engine(args):
     try:
         ac_car = car.load_car(args.ac_car_folder)
-        ac_car.swap_engine(DefaultEngineFabricator().create_from_beamng_mod(args.exported_car_folder),
+        fabricator = DefaultEngineFabricator(use_csp_physics_extensions=args.use_csp_physics)
+        ac_car.swap_engine(fabricator.create_from_beamng_mod(args.exported_car_folder),
                            update_mass=args.update_mass,
                            old_engine_mass=args.mass_hint)
+        ac_car.version = "extended-2" if args.use_csp_physics else "1"
         ac_car.write()
     except Exception as e:
         print(f"Failed to swap engine from {args.exported_car_folder} to {args.ac_car_folder}")
