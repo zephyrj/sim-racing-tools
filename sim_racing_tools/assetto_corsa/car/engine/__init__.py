@@ -22,6 +22,7 @@ along with sim-racing-tools. If not, see <https://www.gnu.org/licenses/>.
 import toml
 import os
 import csv
+from collections import OrderedDict
 
 from typing import List
 from sim_racing_tools.assetto_corsa.utils import IniObj, extract_ini_primitive_value
@@ -34,6 +35,8 @@ FROM_COAST_REF = "FROM_COAST_REF"
 ENGINE_INI_FILENAME = "engine.ini"
 METADATA_FILENAME = "engine-metadata.toml"
 BOOST_FILENAME = "boost.csv"
+THERMAL_EFFICIENCY_RATIO_LUT_NAME = "therm_eff.lut"
+FUEL_FLOW_LUT_NAME = "max_flow.lut"
 
 
 class NoEngineIni(ValueError):
@@ -89,6 +92,7 @@ class EngineMetadata(object):
         self.ui_data = None
         self.mass_kg: int or None = None
         self.boost_curve = dict()
+        self.efficiency_dict = dict()
         self.info_dict = dict()
 
     def load(self, data_dir):
@@ -127,13 +131,96 @@ class EngineMetadata(object):
                     f.write(f'{round(rpm)},{boost_bar}\n')
 
 
+class ExtendedFuelConsumptionData(object):
+    def __init__(self):
+        self.idle_throttle: float = 0.03
+        self.idle_cutoff: int = 0
+        self.mechanical_efficiency: float = 0.85
+
+    def load_base_params_from_ini(self, ini_object):
+        engine_data_params = ["MECHANICAL_EFFICIENCY", "IDLE_THROTTLE", "IDLE_CUTOFF"]
+        for param in engine_data_params:
+            if param in ini_object["ENGINE_DATA"]:
+                setattr(self, param.lower(), ini_object["ENGINE_DATA"][param])
+
+    def update_ini_with_base_params(self, ini_object):
+        ini_object["ENGINE_DATA"]["MECHANICAL_EFFICIENCY"] = self.mechanical_efficiency
+        ini_object["ENGINE_DATA"]["IDLE_THROTTLE"] = self.idle_throttle
+        ini_object["ENGINE_DATA"]["IDLE_CUTOFF"] = self.idle_cutoff
+
+
+class FuelConsumptionEfficiency(ExtendedFuelConsumptionData):
+    def __init__(self):
+        super(FuelConsumptionEfficiency, self).__init__()
+        self.thermal_efficiency: float = 0.30
+        self.thermal_efficiency_dict = None
+        self.fuel_lhv: int = 43
+        self.turbo_efficiency: float or None = None
+
+    def load_from_ini(self, ini_object):
+        self.load_base_params_from_ini(ini_object)
+        if "FUEL_CONSUMPTION" in ini_object:
+            fuel_consumption_params = ["THERMAL_EFFICIENCY", "FUEL_LHV", "TURBO_EFFICIENCY"]
+            for param in fuel_consumption_params:
+                if param in ini_object["FUEL_CONSUMPTION"]:
+                    setattr(self, param.lower(), ini_object["FUEL_CONSUMPTION"][param])
+            if "THERMAL_EFFICIENCY_LUT" in ini_object["FUEL_CONSUMPTION"]:
+                self.thermal_efficiency_dict = OrderedDict()
+                with open(os.path.join(ini_object.dirname(),
+                                       ini_object["FUEL_CONSUMPTION"]["THERMAL_EFFICIENCY_LUT"])) as f:
+                    for line in f.readlines():
+                        data = line.strip().split("|")
+                        self.thermal_efficiency_dict[data[0]] = data[1]
+
+    def update_ini_object(self, ini_object):
+        self.update_ini_with_base_params(ini_object)
+        ini_object["FUEL_CONSUMPTION"]["THERMAL_EFFICIENCY"] = self.thermal_efficiency
+        ini_object["FUEL_CONSUMPTION"]["FUEL_LHV"] = self.fuel_lhv
+        if self.turbo_efficiency:
+            ini_object["FUEL_CONSUMPTION"]["TURBO_EFFICIENCY"] = self.turbo_efficiency
+        if self.thermal_efficiency_dict:
+            ini_object["FUEL_CONSUMPTION"]["THERMAL_EFFICIENCY_LUT"] = THERMAL_EFFICIENCY_RATIO_LUT_NAME
+            with open(os.path.join(ini_object.dirname(), THERMAL_EFFICIENCY_RATIO_LUT_NAME)) as f:
+                for torque_ratio, thermal_efficiency in self.thermal_efficiency_dict.items():
+                    f.write(f'{torque_ratio}|{thermal_efficiency}\n')
+
+
+class FuelConsumptionFlowRate(ExtendedFuelConsumptionData):
+    def __init__(self):
+        super(FuelConsumptionFlowRate, self).__init__()
+        self.max_fuel_flow_lut = None
+        self.max_fuel_flow = 0
+
+    def load_from_ini(self, ini_object):
+        self.load_base_params_from_ini(ini_object)
+        if "FUEL_CONSUMPTION" not in ini_object:
+            return
+        self.max_fuel_flow = ini_object["FUEL_CONSUMPTION"]["MAX_FUEL_FLOW"]
+        if "MAX_FUEL_FLOW_LUT" in ini_object["FUEL_CONSUMPTION"]:
+            self.max_fuel_flow_lut = dict()
+            with open(os.path.join(ini_object.dirname(), ini_object["FUEL_CONSUMPTION"]["MAX_FUEL_FLOW_LUT"]), "r") as f:
+                for line in f.readlines():
+                    data = line.strip().split("|")
+                    if len(data) > 1:
+                        self.max_fuel_flow_lut[data[0]] = data[1]
+
+    def update_ini_object(self, ini_object):
+        self.update_ini_with_base_params(ini_object)
+        ini_object["FUEL_CONSUMPTION"] = dict()
+        ini_object["FUEL_CONSUMPTION"]["MAX_FUEL_FLOW"] = self.max_fuel_flow
+        if self.max_fuel_flow_lut:
+            ini_object["FUEL_CONSUMPTION"]["MAX_FUEL_FLOW_LUT"] = FUEL_FLOW_LUT_NAME
+            with open(os.path.join(ini_object.dirname(), FUEL_FLOW_LUT_NAME), "w+") as f:
+                for rpm, max_flow_rate in self.max_fuel_flow_lut.items():
+                    f.write(f'{rpm}|{max_flow_rate}\n')
+
+
 class Engine(object):
     def __init__(self):
         self.metadata: EngineMetadata = EngineMetadata()
         self.ini_data = None
         self.version = 1  # The version of the assetto corsa ini file to output
-        self.fuel_consumption: None or int = None
-
+        self.basic_fuel_consumption: None or int = None
         self.power_info: Power = Power()
         self.coast_curve: CoastCurve = CoastCurve()
         self.altitude_sensitivity = 0.1
@@ -141,6 +228,7 @@ class Engine(object):
         self.limiter: int = 0  # sql Variants.MaxRPM
         self.limiter_hz: int = 30
         self.minimum: int = 0  # sql Variants.IdleSpeed
+        self.extended_fuel_consumption: FuelConsumptionEfficiency or FuelConsumptionFlowRate or None = None
 
         # We generate this from generate_resource_summary as power.lut
         self.torque_curve = None
@@ -167,8 +255,14 @@ class Engine(object):
                                       extract_ini_primitive_value(self.ini_data["HEADER"]["POWER_CURVE"])))
         self.coast_curve.load_from_ini(ini_data)
         self.turbo.load_from_ini(ini_data)
+        if "FUEL_CONSUMPTION" in ini_data:
+            if "MAX_FUEL_FLOW" in ini_data["FUEL_CONSUMPTION"]:
+                self.extended_fuel_consumption = FuelConsumptionFlowRate()
+            else:
+                self.extended_fuel_consumption = FuelConsumptionEfficiency()
+            self.extended_fuel_consumption.load_from_ini(ini_data)
 
-    def write(self, output_path=None):
+    def write(self, output_path=None, use_csp_extended_physics=False):
         if output_path is None and self.ini_data is None:
             raise IOError("No output file specified")
         ini_data = IniObj(os.path.join(output_path, "engine.ini")) if output_path else self.ini_data
@@ -190,6 +284,15 @@ class Engine(object):
         ini_data["DAMAGE"]["RPM_THRESHOLD"] = self.rpm_threshold
         ini_data["DAMAGE"]["RPM_DAMAGE_K"] = self.rpm_damage_k
         self.turbo.update_ini(ini_data)
+        if use_csp_extended_physics:
+            if self.extended_fuel_consumption:
+                self.extended_fuel_consumption.update_ini_object(ini_data)
+        else:
+            for param in ["MECHANICAL_EFFICIENCY", "IDLE_THROTTLE", "IDLE_CUTOFF"]:
+                if param in ini_data["ENGINE_DATA"]:
+                    ini_data["ENGINE_DATA"].pop(param)
+            if "FUEL_CONSUMPTION" in ini_data:
+                ini_data.pop("FUEL_CONSUMPTION")
         ini_data.write()
 
     def aspiration(self):

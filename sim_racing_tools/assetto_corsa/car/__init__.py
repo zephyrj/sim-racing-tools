@@ -34,6 +34,9 @@ import sim_racing_tools.quick_bms as quick_bms
 from typing import List
 
 
+CSP_EXTENDED_PHYSICS_VERSION = "extended-2"
+
+
 class NoSuchCar(ValueError):
     def __init__(self, car_name):
         super(NoSuchCar, self).__init__(f"No car exists with the name {car_name}")
@@ -220,6 +223,17 @@ class Car(object):
         self.drivetrain: drivetrain.Drivetrain or None = None
         self.shift_lights: ShiftLights = ShiftLights()
 
+    @property
+    def using_csp_extended_physics(self):
+        return self.version == CSP_EXTENDED_PHYSICS_VERSION
+
+    @using_csp_extended_physics.setter
+    def using_csp_extended_physics(self, use):
+        if use:
+            self.version = CSP_EXTENDED_PHYSICS_VERSION
+        else:
+            self.version = "1"
+
     def load_from_path(self, car_path):
         self.car_path = car_path
         self.data_path = os.path.join(car_path, "data")
@@ -227,7 +241,8 @@ class Car(object):
         self.version = ini_data["HEADER"]["VERSION"]
         self.screen_name = ini_data["INFO"]["SCREEN_NAME"]
         self.total_mass = extract_ini_primitive_value(ini_data["BASIC"]["TOTALMASS"], int)
-        self.fuel_consumption = extract_ini_primitive_value(ini_data["FUEL"]["CONSUMPTION"], float)
+        if "CONSUMPTION" in ini_data["FUEL"]:
+            self.fuel_consumption = extract_ini_primitive_value(ini_data["FUEL"]["CONSUMPTION"], float)
         self.default_fuel = extract_ini_primitive_value(ini_data["FUEL"]["FUEL"], int)
         self.max_fuel = extract_ini_primitive_value(ini_data["FUEL"]["MAX_FUEL"], int)
         self._load_ai_data()
@@ -237,7 +252,7 @@ class Car(object):
         self.car_ini_data = ini_data
         self.ui_info.load(self.car_path)
 
-    def swap_engine(self, new_engine, update_mass=False, old_engine_mass=None):
+    def swap_engine(self, new_engine, update_mass=False, old_engine_mass=None, use_csp_physics_extensions=False):
         """
         ai.ini:
         [GEARS]
@@ -271,8 +286,11 @@ class Car(object):
         :param new_engine:
         :param update_mass:
         :param old_engine_mass:
+        :param use_csp_physics_extensions
         :return:
         """
+        self.using_csp_extended_physics = use_csp_physics_extensions
+
         if new_engine.metadata.mass_kg and update_mass:
             old_mass = self.engine.metadata.mass_kg if self.engine.metadata.mass_kg else old_engine_mass
             if not old_mass:
@@ -281,8 +299,13 @@ class Car(object):
             self.total_mass += new_engine.metadata.mass_kg
         self.engine = new_engine
 
-        if new_engine.fuel_consumption:
-            self.fuel_consumption = new_engine.fuel_consumption
+        if self.using_csp_extended_physics:
+            if self.engine.extended_fuel_consumption:
+                self.fuel_consumption = None
+        else:
+            if self.engine.basic_fuel_consumption:
+                self.fuel_consumption = self.engine.basic_fuel_consumption
+
         if not self.data_path:
             return
         self.shift_lights.update(self.engine.limiter)
@@ -300,12 +323,16 @@ class Car(object):
         ini_data.update_attribute("VERSION", self.version, section_name="HEADER")
         ini_data.update_attribute("SCREEN_NAME", self.screen_name, section_name="INFO")
         ini_data.update_attribute("TOTALMASS", self.total_mass, section_name="BASIC")
-        ini_data.update_attribute("CONSUMPTION", self.fuel_consumption, section_name="FUEL")
+        if self.using_csp_extended_physics:
+            if "CONSUMPTION" in ini_data["FUEL"]:
+                ini_data["FUEL"].pop("CONSUMPTION")
+        else:
+            ini_data.update_attribute("CONSUMPTION", self.fuel_consumption, section_name="FUEL")
         ini_data.update_attribute("FUEL", self.default_fuel, section_name="FUEL")
         ini_data.update_attribute("MAX_FUEL", self.max_fuel, section_name="FUEL")
         ini_data.write()
         self._write_ai_data(ini_data.dirname())
-        self.engine.write(ini_data.dirname())
+        self.engine.write(ini_data.dirname(), self.using_csp_extended_physics)
         self.drivetrain.write(ini_data.dirname())
         self.shift_lights.write(ini_data.dirname())
         self.ui_info.write(self.car_path if not output_path else output_path)

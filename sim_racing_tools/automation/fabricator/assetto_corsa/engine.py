@@ -28,7 +28,8 @@ import sim_racing_tools.utils as utils
 from automation.car_file_decoder import CarFile
 from automation.jbeam import Parser as JBeamParser
 
-from assetto_corsa.car.engine import Engine, TurboSection, FROM_COAST_REF, EngineSources, EngineUIData
+import assetto_corsa.car.engine as ac_engine
+
 
 LATEST_VERSION = 1
 
@@ -64,7 +65,13 @@ class EngineParameterCalculatorV1(object):
 
     @property
     def fuel_consumption(self):
-        return get_fuel_consumption_v1(self.engine_db_data)
+        return get_basic_fuel_consumption_v1(self.engine_db_data)
+
+    @property
+    def extended_fuel_consumption(self):
+        data = get_extended_fuel_consumption_v1(self.engine_db_data)
+        data.idle_cutoff = self.idle_speed + 100
+        return data
 
     def set_engine_power_info(self, engine):
         set_power_info_v1(engine, self.engine_db_data)
@@ -88,7 +95,7 @@ class DefaultEngineFabricator(object):
         jbeam_engine_data = JBeamParser().naive_parse(os.path.join(data_dir, installation.ENGINE_JBEAM_NAME))
         params = version_to_parameter_selector[self.version](car_data, engine_db_data, jbeam_engine_data)
 
-        engine = Engine()
+        engine = ac_engine.Engine()
         set_metadata(engine, engine_db_data)
         set_ui_data(engine, engine_db_data)
         engine.inertia = params.inertia
@@ -96,28 +103,30 @@ class DefaultEngineFabricator(object):
         engine.limiter = params.limiter
         engine.rpm_threshold = params.max_rpm_without_damage
         engine.rpm_damage_k = params.engine_damage_rate_over_max_rpm
-        engine.fuel_consumption = params.fuel_consumption
+        engine.basic_fuel_consumption = params.fuel_consumption
+        if self.use_csp_physics_extensions:
+            engine.extended_fuel_consumption = params.extended_fuel_consumption
         params.set_engine_power_info(engine)
         params.set_engine_coast_info(engine)
         return engine
 
 
-def set_metadata(ac_engine, engine_db_data):
-    ac_engine.metadata.source = EngineSources.AUTOMATION
-    ac_engine.metadata.mass_kg = round(engine_db_data["Weight"])
-    ac_engine.metadata.info_dict["automation-version"] = engine_db_data["GameVersion"]
-    ac_engine.metadata.info_dict["automation-data"] = engine_db_data
+def set_metadata(engine_object, engine_db_data):
+    engine_object.metadata.source = ac_engine.EngineSources.AUTOMATION
+    engine_object.metadata.mass_kg = round(engine_db_data["Weight"])
+    engine_object.metadata.info_dict["automation-version"] = engine_db_data["GameVersion"]
+    engine_object.metadata.info_dict["automation-data"] = engine_db_data
 
 
-def set_ui_data(ac_engine, engine_db_data):
-    ui_data = EngineUIData()
+def set_ui_data(engine_object, engine_db_data):
+    ui_data = ac_engine.EngineUIData()
     ui_data.torque_curve = [[str(round(rpm)), str(round(engine_db_data["torque-curve"][idx]))]
                             for idx, rpm in enumerate(engine_db_data["rpm-curve"])]
     ui_data.max_torque = f"{round(engine_db_data['PeakTorque'])}Nm"
     ui_data.power_curve = [[str(round(rpm)), str(round(utils.kw_to_bhp(engine_db_data["power-curve"][idx])))]
                            for idx, rpm in enumerate(engine_db_data["rpm-curve"])]
     ui_data.max_power = f"{round(utils.kw_to_bhp(engine_db_data['PeakPower']))}bhp"
-    ac_engine.metadata.ui_data = ui_data
+    engine_object.metadata.ui_data = ui_data
 
 
 def get_inertia_v1(jbeam_engine_data):
@@ -133,7 +142,7 @@ def get_limiter_v1(engine_db_data):
     return round(engine_db_data["MaxRPM"])
 
 
-def get_fuel_consumption_v1(engine_db_data):
+def get_basic_fuel_consumption_v1(engine_db_data):
     # From https://buildingclub.info/calculator/g-kwh-to-l-h-online-from-gram-kwh-to-liters-per-hour/
     # Fuel Use (l/h) = (Engine Power (kW) * BSFC@Power) / Fuel density kg/m3
     fuel_use_per_hour = (engine_db_data["PeakPower"] * engine_db_data["Econ"]) / 750
@@ -151,20 +160,47 @@ def get_fuel_consumption_v1(engine_db_data):
     return round((fuel_use_per_sec * 1000) / engine_db_data["PeakPowerRPM"], 4)
 
 
-def set_power_info_v1(ac_engine, engine_db_data):
-    if engine_db_data["AspirationType"].startswith("Aspiration_Natural"):
-        write_na_torque_curve(ac_engine, engine_db_data)
+# Adapted from https://blog.finxter.com/how-to-calculate-percentiles-in-python/
+def get_percentile_index(data, percentile):
+    n = len(data)
+    p = n * percentile / 100
+    if p.is_integer():
+        return int(p)
     else:
-        write_turbo_torque_curve(ac_engine, engine_db_data)
-        create_turbo_sections_v1(ac_engine, engine_db_data)
-        ac_engine.metadata.boost_curve = {round(rpm): engine_db_data["boost-curve"][idx]
-                                          for idx, rpm in enumerate(engine_db_data["rpm-curve"])}
+        return int(math.ceil(p)) - 1
+
+
+def get_extended_fuel_consumption_v1(engine_db_data):
+    data = ac_engine.FuelConsumptionFlowRate()
+    # BSFC = fuel_consumption (g/s) / power (watts)
+    # fuel_consumption (g/s) = BSFC * power (watts)
+    # Get 65th percentile because under race conditions we will tend to be in the upper rev range
+    rpm_index = get_percentile_index(engine_db_data["rpm-curve"], 65)
+    fuel_use_grams_per_sec = ((engine_db_data['econ-curve'][rpm_index]/3600000) *
+                              (engine_db_data['power-curve'][rpm_index] * 1000))
+    data.max_fuel_flow = round(fuel_use_grams_per_sec * 3.6)
+    data.max_fuel_flow_lut = dict()
+    for rpm_index, rpm in enumerate(engine_db_data["rpm-curve"]):
+        fuel_use_grams_per_sec = ((engine_db_data['econ-curve'][rpm_index]/3600000) *
+                                  (engine_db_data['power-curve'][rpm_index] * 1000))
+        data.max_fuel_flow_lut[int(rpm)] = round(fuel_use_grams_per_sec * 3.6)
+    return data
+
+
+def set_power_info_v1(engine_object, engine_db_data):
+    if engine_db_data["AspirationType"].startswith("Aspiration_Natural"):
+        write_na_torque_curve(engine_object, engine_db_data)
+    else:
+        write_turbo_torque_curve(engine_object, engine_db_data)
+        create_turbo_sections_v1(engine_object, engine_db_data)
+        engine_object.metadata.boost_curve = {round(rpm): engine_db_data["boost-curve"][idx]
+                                              for idx, rpm in enumerate(engine_db_data["rpm-curve"])}
 
     rpm_increments = engine_db_data["rpm-curve"][-1] - engine_db_data["rpm-curve"][-2]
-    ac_engine.power_info.rpm_curve.append(round(engine_db_data["rpm-curve"][-1] + rpm_increments))
-    ac_engine.power_info.torque_curve.append(round(ac_engine.power_info.torque_curve[-1] / 2))
-    ac_engine.power_info.rpm_curve.append(round(engine_db_data["rpm-curve"][-1] + (rpm_increments * 2)))
-    ac_engine.power_info.torque_curve.append(0)
+    engine_object.power_info.rpm_curve.append(round(engine_db_data["rpm-curve"][-1] + rpm_increments))
+    engine_object.power_info.torque_curve.append(round(engine_object.power_info.torque_curve[-1] / 2))
+    engine_object.power_info.rpm_curve.append(round(engine_db_data["rpm-curve"][-1] + (rpm_increments * 2)))
+    engine_object.power_info.torque_curve.append(0)
 
 
 def set_coast_info_v1(engine, engine_db_data, jbeam_engine_data):
@@ -187,7 +223,7 @@ def set_coast_info_v1(engine, engine_db_data, jbeam_engine_data):
     friction_torque = (angular_velocity_at_max_rpm * dynamic_friction) + \
                       (2 * jbeam_engine_data["Camso_Engine"]["mainEngine"]["friction"])
 
-    engine.coast_curve.curve_data_source = FROM_COAST_REF
+    engine.coast_curve.curve_data_source = ac_engine.FROM_COAST_REF
     engine.coast_curve.reference_rpm = round(engine_db_data["MaxRPM"])
     engine.coast_curve.torque = round(friction_torque)
     engine.coast_curve.non_linearity = 0
@@ -196,18 +232,18 @@ def set_coast_info_v1(engine, engine_db_data, jbeam_engine_data):
 def write_na_torque_curve(engine, engine_data):
     for idx in range(0, len(engine_data["rpm-curve"])):
         engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][idx]))
-        engine.power_info.torque_curve.append(round(engine_data["torque-curve"][idx]))
+        engine.power_info.torque_curve.append(round(engine_data["torque-curve"][idx] * 0.85))
 
 
 def write_turbo_torque_curve(engine, engine_data):
     for idx in range(0, len(engine_data["rpm-curve"])):
         engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][idx]))
         boost_pressure = max(0, engine_data["boost-curve"][idx])
-        engine.power_info.torque_curve.append(round(engine_data["torque-curve"][idx] / (1+boost_pressure)))
+        engine.power_info.torque_curve.append(round((engine_data["torque-curve"][idx] / (1+boost_pressure)) * 0.85))
 
 
 def create_turbo_sections_v1(engine, engine_data):
-    t = TurboSection()
+    t = ac_engine.TurboSection()
     t.cockpit_adjustable = 0
     t.max_boost = round(engine_data["PeakBoost"], 2)
     t.display_max_boost = utils.round_up(engine_data["PeakBoost"], 1)
