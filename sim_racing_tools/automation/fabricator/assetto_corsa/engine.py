@@ -248,11 +248,15 @@ def create_turbo_sections_v1(engine, engine_data):
     t.max_boost = round(engine_data["PeakBoost"], 2)
     t.display_max_boost = utils.round_up(engine_data["PeakBoost"], 1)
     t.wastegate = round(engine_data["PeakBoost"], 2)
-    t.reference_rpm = round(engine_data["PeakBoostRPM"])
+    t.reference_rpm = round(engine_data["PeakBoostRPM"]) - 500
     # TODO work out how to better approximate these
     t.lag_dn = 0.99
-    t.lag_up = 0.965
-    t.gamma = 2.5
+    t.lag_up = 0.970
+    t.gamma = 8
+    c = ac_engine.TurboController(0)
+    for idx, rpm in enumerate(engine_data["rpm-curve"]):
+        c.lut[round(rpm)] = max(0.0, round(engine_data["boost-curve"][idx], 2))
+    t.controllers.controllers.append(c)
     engine.turbo.sections.append(t)
 
 

@@ -445,6 +445,7 @@ class TurboSection(object):
         self.reference_rpm: int = 0
         self.gamma: float = 1.0
         self.cockpit_adjustable: int = 0
+        self.controllers: TurboControllers = TurboControllers()
 
     def load_from_ini(self, section_idx, ini_data):
         turbo_section_name = f"TURBO_{section_idx}"
@@ -456,6 +457,7 @@ class TurboSection(object):
         self.reference_rpm = extract_ini_primitive_value(ini_data[turbo_section_name]["REFERENCE_RPM"], int)
         self.gamma = extract_ini_primitive_value(ini_data[turbo_section_name]["GAMMA"], float)
         self.cockpit_adjustable = extract_ini_primitive_value(ini_data[turbo_section_name]["COCKPIT_ADJUSTABLE"], float)
+        self.controllers.load_from_dir(ini_data.dirname(), section_idx)
 
     def update_ini_with_section(self, section_idx, ini_data):
         turbo_section_name = f"TURBO_{section_idx}"
@@ -469,6 +471,114 @@ class TurboSection(object):
         ini_data[turbo_section_name]["REFERENCE_RPM"] = self.reference_rpm
         ini_data[turbo_section_name]["GAMMA"] = self.gamma
         ini_data[turbo_section_name]["COCKPIT_ADJUSTABLE"] = self.cockpit_adjustable
+        self.controllers.write(ini_data.dirname())
+
+
+class TurboControllers(object):
+    def __init__(self):
+        self.index = 0
+        self.ini_data = None
+        self.controllers = list()
+
+    def load_from_dir(self, dirname, index):
+        ctrl_filename = os.path.join(dirname, f"ctrl_turbo{index}.ini")
+        if not os.path.isfile(ctrl_filename):
+            return None
+
+        self.ini_data = IniObj(ctrl_filename)
+        controller_index = 0
+        while True:
+            if f"CONTROLLER_{controller_index}" not in self.ini_data:
+                break
+            c = TurboController(controller_index)
+            c.load_from_ini(self.ini_data)
+            self.controllers.append(c)
+            controller_index += 1
+
+    def get_filename(self):
+        return f"ctrl_turbo{self.index}.ini"
+
+    def write(self, output_dir):
+        out_file = os.path.join(output_dir, self.get_filename())
+
+        if not len(self.controllers):
+            if os.path.isfile(self.get_filename()):
+                os.remove(os.path.join(output_dir, self.get_filename()))
+            return
+
+        with open(out_file, "wb+") as f:
+            if not self.ini_data:
+                self.ini_data = IniObj(out_file)
+            for controller in self.controllers:
+                controller.update_ini(self.ini_data)
+            self.ini_data.write(outfile=f)
+
+
+TURBO_CONTROLLER_PARAMS = ["INPUT", "COMBINATOR", "FILTER", "UP_LIMIT", "DOWN_LIMIT"]
+class TurboController(object):
+    """
+    Details taken from:
+    https://www.racedepartment.com/threads/engine-ini-turbo-configuration.174373/
+
+    Example:
+        ctrl_turbo0.ini
+        [CONTROLLER_0]
+        INPUT=RPMS
+        COMBINATOR=ADD
+        ; LUT parameters are rpm|wastegate
+        LUT=(0=2.0|3500=2.0|6400=1.95|6600=1.91|6800=1.85|7000=1.82|7200=1.8|7400=1.76|7600=1.73|7800=1.69|8000=1.64|8200=1.59|8400=1.53|8600=1.48|8800=1.42|9000=1.37)
+        FILTER=0.99     ; new value each physics step = filter*last_step_value+(1-filter)*lut_value
+        UP_LIMIT=10000  ; Set the upper limit if multiple controllers used in combination
+        DOWN_LIMIT=0.0  ; Set the lower limit if multiple controllers used in combination
+    """
+    def __init__(self, index):
+        self.index = index
+        self.input = "RPMS"
+        self.combinator = "ADD"
+        # TODO it might be valid for this to be a filename, if so, handle the case where this is a filename
+        self.lut = OrderedDict()
+        self.filter: float = 0.99
+        self.up_limit = 10000
+        self.down_limit = 0
+
+    def load_from_ini(self, ini_object):
+        for param in TURBO_CONTROLLER_PARAMS:
+            if param in ini_object:
+                setattr(self, param.lower(), ini_object[f"CONTROLLER_{self.index}"][param])
+        if "LUT" in ini_object[f"CONTROLLER_{self.index}"]:
+            lut_value = ini_object[f"CONTROLLER_{self.index}"]["LUT"].strip()
+            if lut_value.startswith("("):
+                self._load_lut_from_string(lut_value)
+            else:
+                self._load_lut_from_file(os.path.join(ini_object.dirname, lut_value))
+
+    def _load_lut_from_string(self, lut_string):
+        lut_string = lut_string[1:-1]  # Get rid of enclosing brackets '(' ')'
+        for data in lut_string.split("|"):
+            self._add_lut_entry(data)
+
+    def _load_lut_from_file(self, lut_file_path):
+        with open(lut_file_path, "r") as f:
+            for line in f.readlines():
+                self._add_lut_entry(line)
+
+    def _add_lut_entry(self, lut_line):
+        lut_data = lut_line.strip().split("=")
+        self.lut[lut_data[0]] = lut_data[1]
+
+    def update_ini(self, ini_object):
+        section_name = f"CONTROLLER_{self.index}"
+        if section_name not in ini_object:
+            ini_object[section_name] = dict()
+        for param in TURBO_CONTROLLER_PARAMS:
+            ini_object[section_name][param] = getattr(self, param.lower())
+        ini_object[section_name]["LUT"] = self.get_lut_string()
+
+    def get_lut_string(self):
+        out_string = "("
+        out_string += "|".join([f"{rpm}={wastegate}" for rpm, wastegate in self.lut.items()])
+        out_string += ")"
+        return out_string
 
 
 """

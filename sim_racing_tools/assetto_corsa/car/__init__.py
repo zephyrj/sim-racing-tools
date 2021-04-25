@@ -272,16 +272,6 @@ class Car(object):
         [AUTO_SHIFTER]
         [DOWNSHIFT_PROTECTION] (dependant on quality?)
 
-        TODO
-        ctrl_turbo0.ini
-        [CONTROLLER_0]
-        INPUT=RPMS
-        COMBINATOR=ADD
-        LUT=(0=2.0|3500=2.0|6400=1.95|6600=1.91|6800=1.85|7000=1.82|7200=1.8|7400=1.76|7600=1.73|7800=1.69|8000=1.64|8200=1.59|8400=1.53|8600=1.48|8800=1.42|9000=1.37)
-        FILTER=0.99     ; new value each physics step = filter*last_step_value+(1-filter)*lut_value
-        UP_LIMIT=10000
-        DOWN_LIMIT=0.0
-
 
         :param new_engine:
         :param update_mass:
