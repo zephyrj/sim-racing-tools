@@ -537,7 +537,7 @@ class TurboController(object):
         self.combinator = "ADD"
         # TODO it might be valid for this to be a filename, if so, handle the case where this is a filename
         self.lut = OrderedDict()
-        self.filter: float = 0.99
+        self.filter: float = 0.95
         self.up_limit = 10000
         self.down_limit = 0
 
