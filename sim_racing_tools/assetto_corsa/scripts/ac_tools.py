@@ -35,9 +35,15 @@ parser_swap_engine.add_argument('-c', '--use-csp-physics', action="store_true",
                                 help="Allow use of custom shader patch physics extensions when creating engine data")
 argcomplete.autocomplete(parser)
 
-import sys
-import sim_racing_tools.assetto_corsa.scripts.ac_tools_impl as ac_impl
-parser_clone_car.set_defaults(func=ac_impl.clone_car)
-parser_swap_engine.set_defaults(func=ac_impl.swap_engine)
-args = parser.parse_args()
-sys.exit(args.func(args))
+
+def main():
+    import sys
+    import sim_racing_tools.assetto_corsa.scripts.ac_tools_impl as ac_impl
+    parser_clone_car.set_defaults(func=ac_impl.clone_car)
+    parser_swap_engine.set_defaults(func=ac_impl.swap_engine)
+    args = parser.parse_args()
+    sys.exit(args.func(args))
+
+
+if __name__ == '__main__':
+    main()

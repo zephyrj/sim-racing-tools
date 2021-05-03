@@ -25,10 +25,10 @@ setuptools.setup(
                       "argcomplete~=1.12.3",
                       "pandas~=1.2.4",
                       "plotly~=4.14.3",
-                      "pywin32~=300"],
+                      "pywin32"],
     scripts=[],
     entry_points={
-        'console_scripts': [],
+        'console_scripts': ['ac-tools=sim_racing_tools.assetto_corsa.scripts.ac_tools:main'],
     },
     classifiers=[
         "Programming Language :: Python :: 3",
