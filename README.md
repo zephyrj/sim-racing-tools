@@ -46,5 +46,5 @@ py -m pip install git+https://github.com/zephyrj/sim-racing-tools@main
 The tools will now be installed and available from a python console within your environment
 
 ## Things you can do
-[Clone existing AC car](sim_racing_tools/doc/clone_car.md)  
-[Transfer an engine made in Automation into a car in AC](sim_racing_tools/doc/swap_automation_engine.md)
+[Clone existing AC car](sim_racing_tools/docs/clone_car.md)  
+[Transfer an engine made in Automation into a car in AC](sim_racing_tools/docs/swap_automation_engine.md)
