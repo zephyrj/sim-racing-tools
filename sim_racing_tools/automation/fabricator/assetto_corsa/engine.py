@@ -22,13 +22,13 @@ import os
 import glob
 import math
 
-import automation.installation as installation
-import automation.sandbox as sandbox
+import sim_racing_tools.automation.installation as installation
+import sim_racing_tools.automation.sandbox as sandbox
 import sim_racing_tools.utils as utils
-from automation.car_file_decoder import CarFile
-from automation.jbeam import Parser as JBeamParser
+from sim_racing_tools.automation.car_file_decoder import CarFile
+from sim_racing_tools.automation.jbeam import Parser as JBeamParser
 
-import assetto_corsa.car.engine as ac_engine
+import sim_racing_tools.assetto_corsa.car.engine as ac_engine
 
 
 LATEST_VERSION = 1

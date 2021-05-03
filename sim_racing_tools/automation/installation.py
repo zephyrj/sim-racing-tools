@@ -26,7 +26,7 @@ if sys.platform == "win32":
 
 import sys
 import os
-import constants
+import sim_racing_tools.constants as constants
 
 GAME_NAME = "Automation"
 GAME_ID = 293760

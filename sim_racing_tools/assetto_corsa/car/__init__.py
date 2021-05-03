@@ -29,7 +29,7 @@ import sim_racing_tools.assetto_corsa.utils as ac_utils
 from sim_racing_tools.assetto_corsa.utils import extract_ini_primitive_value
 import sim_racing_tools.assetto_corsa.installation as installation
 import sim_racing_tools.assetto_corsa.car.engine as engine
-import assetto_corsa.car.drivetrain as drivetrain
+import sim_racing_tools.assetto_corsa.car.drivetrain as drivetrain
 import sim_racing_tools.quick_bms as quick_bms
 from typing import List
 

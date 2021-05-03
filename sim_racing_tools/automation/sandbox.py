@@ -24,7 +24,7 @@ import struct
 import sqlite3
 import logging
 from collections import OrderedDict
-import automation.installation as installation
+import sim_racing_tools.automation.installation as installation
 
 
 def get_engine_bill_of_materials(variant_uid):
