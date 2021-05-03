@@ -134,8 +134,7 @@ def get_inertia_v1(jbeam_engine_data):
 
 
 def get_idle_speed_v1(engine_db_data):
-    return round(engine_db_data["IdleSpeed"] if engine_db_data["IdleSpeed"] >= engine_db_data["rpm-curve"][0] else
-                 engine_db_data["rpm-curve"][0])
+    return round(max(engine_db_data["IdleSpeed"], engine_db_data["rpm-curve"][0]))
 
 
 def get_limiter_v1(engine_db_data):
