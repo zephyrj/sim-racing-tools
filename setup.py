@@ -19,6 +19,7 @@ setuptools.setup(
     packages=setuptools.find_packages('.'),
     include_package_data=True,
     install_requires=["setuptools~=54.2.0",
+                      "wheel~=0.36.2",
                       "toml~=0.10.2",
                       "six~=1.15.0",
                       "configobj~=5.0.6",
