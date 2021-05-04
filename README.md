@@ -8,8 +8,8 @@ bugs.
 - A Windows computer (I plan to support Linux in future)
 - The [Git](https://git-scm.com/downloads) version control system needs to be installed
 - [python3](https://www.python.org/downloads/) needs to be installed
-- [QuickBMS](http://aluigi.altervista.org/quickbms.htm) needs to be downloaded and you will need to know the folder it is in.
-- The [.acd extractor plugin](http://aluigi.org/papers/bms/others/assetto_corsa_acd.bms) for QuickBMS needs to be downloaded and placed inside the folder containing `quickbms.exe`
+- Either [Content Manager](https://assettocorsa.club/content-manager.html) _or_ [QuickBMS](http://aluigi.altervista.org/quickbms.htm) needs to be downloaded and you will need to know the folder it is in. We will need to use one of these to unpack data.acd files.
+- If using QuickBMS the [.acd extractor plugin](http://aluigi.org/papers/bms/others/assetto_corsa_acd.bms) for QuickBMS needs to be downloaded and placed inside the folder containing `quickbms.exe`
 - A willingness to hack around with a bit of python programming
 
 ### Optional first step:
