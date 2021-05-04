@@ -41,4 +41,4 @@ This allows you to specify what mass (in kg) that the tool should use for the ex
 If this flag is provided then the data files created will use the extended-2 option to allow for CSP extended physics. If you provide this option then you will only be able to use the car when running AC with CSP - at the time of writing CSP version 0.1.73 worked correctly. More info can be found at [CSP GitHub](https://github.com/ac-custom-shaders-patch/acc-extension-config/wiki/Cars-%E2%80%93-Enabling-extended-physics) and [CSP Trello](https://trello.com/b/xq54vHsX/ac-patch)
 
 ## How the transfer works
-You can find the nitty-gritty details of what conversions are made [here](sim_racing_tools/automation/fabricator/assetto_corsa/docs/ac_conversion_calculations.md)
+You can find the nitty-gritty details of what conversions are made [here](/sim_racing_tools/automation/fabricator/assetto_corsa/docs/ac_conversion_calculations.md)
