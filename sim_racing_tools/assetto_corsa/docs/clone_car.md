@@ -10,13 +10,18 @@
   you will be able to see a folder for each installed car.
 - Open the folder of the car you would like to clone. Create a new directory inside this called `data`  
 
-- We now need to extract the data.acd file inside the car directory using QuickBMS
+- We now need to extract the data.acd file inside the car directory. This can be done using QuickBMS or Content Manager
+  ### QuickBMS
   - Go to the directory that you downloaded QuickBMS into and double-click on quickbms.exe
   - You will first be asked to select the plugin to use; choose the AC extractor plugin (assetto_corsa_acd.bms)
     that you downloaded
   - Next it will ask you for the file to extract; choose the data.acd file in the folder of the car you wish to clone
   - Finally, it will ask you to select the folder to extract into; choose the data folder we created in the previous step 
-
+  ### Content Manager
+  - Go to the "About" tab and then into the "About" subtab within it
+  - Repeatedly click on the Version value near the top of the page; this will allow you to enable dev mode
+  - Go to the "Content" tab and select the "cars" subtab
+  - Select the car you wish to clone and then at the bottom of the window click the button "Unpack data"
 - We can now clone the car. To create a clone of, say, the Tatuus you would run the 
   following command inside your command prompt:
   ```commandline
