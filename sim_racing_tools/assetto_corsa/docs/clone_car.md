@@ -1,5 +1,6 @@
+# Cloning a car
 > I try to assume people are decent until proven otherwise but just a gentle reminder; please don't use this to rip off anyone else's hard work. Play around with it all you like on your computer but don't upload something based off someone else's work without getting the original authors permission. Most people are very happy to share their work if you ask politely and credit them for it.  
-- If you have set one up, enter your virtual environment in a command prompt window (see [README.md](README.md)) and type:
+- If you have set one up, enter your virtual environment in a command prompt window (see [README.md](/README.md)) and type:
 - First we need to find where all our cars are installed. If the game is installed through Steam then this will be:
   ```
   C:\Program Files (x86)\Steam\steamapps\common\assettocorsa\content\cars
