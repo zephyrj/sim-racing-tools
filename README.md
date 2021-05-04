@@ -19,7 +19,7 @@ anything system-wide.
 
 ### Creating a virtual environment
 To setup a virtual environment first decide where you would like this to live, change into that directory and
-open a command-prompt within it. Inside the command prompt run the command:
+[open a command-prompt within it](https://helpdeskgeek.com/how-to/open-command-prompt-folder-windows-explorer/). Inside the command prompt run the command:
 ```commandline
 py -m venv sim-racing-tool-venv
 ```
@@ -43,7 +43,7 @@ run the following command inside it:
 ```
 py -m pip install git+https://github.com/zephyrj/sim-racing-tools@main
 ```
-The tools will now be installed and available from a python console within your environment
+The tools will now be installed and available from a inside your virtual environment.
 
 ## Things you can do
 [Clone existing AC car](sim_racing_tools/assetto_corsa/docs/clone_car.md)  
