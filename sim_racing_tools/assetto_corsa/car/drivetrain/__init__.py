@@ -83,6 +83,10 @@ class Drivetrain(object):
 class DriveType(object):
     RWD = "RWD"
     FWD = "FWD"
+    AWD = "AWD"
+
+
+EfficiencyLookup = {DriveType.RWD: 0.85, DriveType.FWD: 0.9, DriveType.AWD: 0.75}
 
 
 class Gearbox(object):

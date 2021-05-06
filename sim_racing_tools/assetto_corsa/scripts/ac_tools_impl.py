@@ -1,5 +1,6 @@
 import sys
 import sim_racing_tools.assetto_corsa.car as car
+from sim_racing_tools.assetto_corsa.car.drivetrain import EfficiencyLookup
 from sim_racing_tools.automation.fabricator.assetto_corsa import DefaultEngineFabricator
 
 SUCCESS = 0
@@ -19,7 +20,8 @@ def clone_car(args):
 def swap_engine(args):
     try:
         ac_car = car.load_car(args.ac_car_folder)
-        fabricator = DefaultEngineFabricator(use_csp_physics_extensions=args.use_csp_physics)
+        fabricator = DefaultEngineFabricator(use_csp_physics_extensions=args.use_csp_physics,
+                                             mechanical_efficiency=EfficiencyLookup[ac_car.drivetrain.drive_type])
         ac_car.swap_engine(fabricator.create_from_beamng_mod(args.exported_car_folder),
                            update_mass=args.update_mass,
                            old_engine_mass=args.mass_hint,

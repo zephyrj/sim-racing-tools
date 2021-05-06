@@ -67,14 +67,13 @@ class EngineParameterCalculatorV1(object):
     def fuel_consumption(self):
         return get_basic_fuel_consumption_v1(self.engine_db_data)
 
-    @property
-    def extended_fuel_consumption(self):
-        data = get_extended_fuel_consumption_v1(self.engine_db_data)
+    def get_extended_fuel_consumption(self, mechanical_efficiency):
+        data = get_extended_fuel_consumption_v1(self.engine_db_data, mechanical_efficiency)
         data.idle_cutoff = self.idle_speed + 100
         return data
 
-    def set_engine_power_info(self, engine):
-        set_power_info_v1(engine, self.engine_db_data)
+    def set_engine_power_info(self, engine, mechanical_efficiency):
+        set_power_info_v1(engine, self.engine_db_data, mechanical_efficiency)
 
     def set_engine_coast_info(self, engine):
         set_coast_info_v1(engine, self.engine_db_data, self.jbeam_engine_data)
@@ -84,9 +83,10 @@ version_to_parameter_selector = {1: EngineParameterCalculatorV1}
 
 
 class DefaultEngineFabricator(object):
-    def __init__(self, version=None, use_csp_physics_extensions=False):
+    def __init__(self, version=None, use_csp_physics_extensions=False, mechanical_efficiency=0.85):
         self.version = LATEST_VERSION if not version else version
         self.use_csp_physics_extensions = use_csp_physics_extensions
+        self.mechanical_efficiency = mechanical_efficiency
 
     def create_from_beamng_mod(self, beamng_mod_folder_name):
         data_dir = get_mod_data_dir(beamng_mod_folder_name)
@@ -105,8 +105,8 @@ class DefaultEngineFabricator(object):
         engine.rpm_damage_k = params.engine_damage_rate_over_max_rpm
         engine.basic_fuel_consumption = params.fuel_consumption
         if self.use_csp_physics_extensions:
-            engine.extended_fuel_consumption = params.extended_fuel_consumption
-        params.set_engine_power_info(engine)
+            engine.extended_fuel_consumption = params.get_extended_fuel_consumption(self.mechanical_efficiency)
+        params.set_engine_power_info(engine, self.mechanical_efficiency)
         params.set_engine_coast_info(engine)
         return engine
 
@@ -169,8 +169,9 @@ def get_percentile_index(data, percentile):
         return int(math.ceil(p)) - 1
 
 
-def get_extended_fuel_consumption_v1(engine_db_data):
+def get_extended_fuel_consumption_v1(engine_db_data, mechanical_efficiency):
     data = ac_engine.FuelConsumptionFlowRate()
+    data.mechanical_efficiency = mechanical_efficiency
     # BSFC = fuel_consumption (g/s) / power (watts)
     # fuel_consumption (g/s) = BSFC * power (watts)
     # Get 65th percentile because under race conditions we will tend to be in the upper rev range
@@ -186,11 +187,11 @@ def get_extended_fuel_consumption_v1(engine_db_data):
     return data
 
 
-def set_power_info_v1(engine_object, engine_db_data):
+def set_power_info_v1(engine_object, engine_db_data, mechanical_efficiency):
     if engine_db_data["AspirationType"].startswith("Aspiration_Natural"):
-        write_na_torque_curve(engine_object, engine_db_data)
+        write_na_torque_curve(engine_object, engine_db_data, mechanical_efficiency)
     else:
-        write_turbo_torque_curve(engine_object, engine_db_data)
+        write_turbo_torque_curve(engine_object, engine_db_data, mechanical_efficiency)
         create_turbo_sections_v1(engine_object, engine_db_data)
         engine_object.metadata.boost_curve = {round(rpm): engine_db_data["boost-curve"][idx]
                                               for idx, rpm in enumerate(engine_db_data["rpm-curve"])}
@@ -242,17 +243,18 @@ def calculate_pumping_losses(engine_db_data):
     pumping_loss_watts = ((engine_db_data["MaxRPM"] / 60) / 2) * intake_work_done
 
 
-def write_na_torque_curve(engine, engine_data):
+def write_na_torque_curve(engine, engine_data, mechanical_efficiency):
     for idx in range(0, len(engine_data["rpm-curve"])):
         engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][idx]))
-        engine.power_info.torque_curve.append(round(engine_data["torque-curve"][idx] * 0.85))
+        engine.power_info.torque_curve.append(round(engine_data["torque-curve"][idx] * mechanical_efficiency))
 
 
-def write_turbo_torque_curve(engine, engine_data):
+def write_turbo_torque_curve(engine, engine_data, mechanical_efficiency):
     for idx in range(0, len(engine_data["rpm-curve"])):
         engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][idx]))
         boost_pressure = max(0, engine_data["boost-curve"][idx])
-        engine.power_info.torque_curve.append(round((engine_data["torque-curve"][idx] / (1+boost_pressure)) * 0.85))
+        engine.power_info.torque_curve.append(round((engine_data["torque-curve"][idx] /
+                                                     (1+boost_pressure)) * mechanical_efficiency))
 
 
 def create_turbo_sections_v1(engine, engine_data):
