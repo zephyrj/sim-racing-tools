@@ -159,9 +159,9 @@ provided RPM and then the value drops linearly as the RPM goes down unless NON_L
 ### v1
 The Friction and dynamic friction data is available from the engine.jbeam exported file. 
 The dynamic friction torque on the engine in Nm/s - this is a friction torque which increases proportional to 
-engine AV (rad/s).
-angular_velocity_at_max_rpm = ("MaxRPM" * 2 * math.pi) / 60
-friction_torque = (angular_velocity_at_max_rpm * dynamic_friction) + (2 * friction)
+engine AV (rad/s).  
+`angular_velocity_at_max_rpm = ("MaxRPM" * 2 * math.pi) / 60`  
+`friction_torque = (angular_velocity_at_max_rpm * dynamic_friction) + (2 * friction)`
 
 ### Future work
 The values that come out for this seem much lower than the values used on Kunos cars so I suspect something is
