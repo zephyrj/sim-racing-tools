@@ -145,3 +145,25 @@ To calculate a value for the AC base physics fuel consumption constant we start 
 `CONSUMPTION = (fuel_use_per_sec * 1000) / "PeakPowerRPM"`
 
 If the tool is allowed to use CSP extended physics then max_flow.lut is populated by starting with the equation `Fuel consumption (g/s) = BSFC (g/j) * Power (watts)` and plugging in the values `consumption (g/s) = (econ-curve@rpm/3600000) * (power-curve@rpm*1000)"` then taking that value and converting it to litres per hour by multiplying by 3.6
+
+## Coast Curve
+```ini
+[COAST_REF]
+RPM=6500
+TORQUE=38
+NON_LINEARITY=0
+```
+A way of simulating the torque used to slow the car down through engine braking. The TORQUE value applies at the
+provided RPM and then the value drops linearly as the RPM goes down unless NON_LINEARITY is set.
+
+### v1
+The Friction and dynamic friction data is available from the engine.jbeam exported file. 
+The dynamic friction torque on the engine in Nm/s - this is a friction torque which increases proportional to 
+engine AV (rad/s).
+angular_velocity_at_max_rpm = ("MaxRPM" * 2 * math.pi) / 60
+friction_torque = (angular_velocity_at_max_rpm * dynamic_friction) + (2 * friction)
+
+### Future work
+The values that come out for this seem much lower than the values used on Kunos cars so I suspect something is
+missing - this needs more investigation. Potentially pumping losses need adding somehow?
+https://mechanics.stackexchange.com/questions/33271/engine-braking-force
