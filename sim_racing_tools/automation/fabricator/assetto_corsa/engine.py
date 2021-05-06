@@ -228,6 +228,20 @@ def set_coast_info_v1(engine, engine_db_data, jbeam_engine_data):
     engine.coast_curve.non_linearity = 0
 
 
+def calculate_pumping_losses(engine_db_data):
+    """
+    I have no idea if this is required or not
+    :param engine_db_data:
+    :return:
+    """
+    bore = engine_db_data["Bore"]
+    stroke = engine_db_data["Stroke"]
+    cylinder_volume = (((bore/2) * (bore/2)) * math.pi * stroke) / 1000000
+    num_cylinders = round(engine_db_data["Capacity"] / cylinder_volume)
+    intake_work_done = (1013 - 200) * engine_db_data["Capacity"]
+    pumping_loss_watts = ((engine_db_data["MaxRPM"] / 60) / 2) * intake_work_done
+
+
 def write_na_torque_curve(engine, engine_data):
     for idx in range(0, len(engine_data["rpm-curve"])):
         engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][idx]))
