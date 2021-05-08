@@ -276,12 +276,21 @@ def create_turbo_sections_v1(engine, engine_data):
 
 
 def get_mod_data_dir(beamng_mod_folder_name):
-    car_export_path = os.path.join(installation.get_beamng_export_path(),
-                                   beamng_mod_folder_name)
-    if not os.path.isdir(car_export_path):
-        utils.unzip_file(os.path.join(os.path.dirname(car_export_path),
-                                      os.path.basename(car_export_path) + ".zip"))
-    return os.path.join(car_export_path, os.sep.join(["vehicles", beamng_mod_folder_name]))
+    found_path = None
+    for mod_location in installation.get_beamng_export_paths():
+        potential_path = os.path.join(mod_location, beamng_mod_folder_name)
+        if os.path.isdir(potential_path):
+            found_path = potential_path
+            break
+        zip_filename = os.path.join(os.path.dirname(potential_path), os.path.basename(potential_path) + ".zip")
+        if os.path.exists(zip_filename):
+            utils.unzip_file(zip_filename)
+            found_path = potential_path
+            break
+
+    if not found_path:
+        raise ValueError(f"Can't find {beamng_mod_folder_name} in {','.join(installation.get_beamng_export_paths())}")
+    return os.path.join(found_path, os.sep.join(["vehicles", beamng_mod_folder_name]))
 
 
 def load_car_file_data(directory):

@@ -37,7 +37,8 @@ else:
     pass
 
 USER_GAME_DATA_PATH = os.sep.join(["My Games", GAME_NAME])
-BEAMNG_EXPORT_PATH = os.sep.join(["BeamNG.drive", "mods"])
+BEAMNG_MOD_PATH = os.sep.join(["BeamNG.drive", "mods"])
+BEAMNG_LATEST_VERSION_SHORTCUT = os.sep.join(["BeamNG.drive", "latest.lnk"])
 SANDBOX_DB_NAME = "Sandbox_openbeta.db"
 
 ENGINE_JBEAM_NAME = "camso_engine.jbeam"
@@ -55,6 +56,10 @@ def get_user_documents_dir():
         return shell.SHGetFolderPath(0, shellcon.CSIDL_PERSONAL, None, 0)
 
 
+def get_user_appdata_local():
+    return shell.SHGetFolderPath(0, shellcon.CSIDL_LOCAL_APPDATA, 0, 0)
+
+
 def get_userdata_path():
     return os.path.join(get_user_documents_dir(), USER_GAME_DATA_PATH)
 
@@ -63,8 +68,13 @@ def get_sandbox_db_path():
     return os.path.join(get_userdata_path(), SANDBOX_DB_NAME)
 
 
-def get_beamng_export_path():
-    return os.path.join(get_user_documents_dir(), BEAMNG_EXPORT_PATH)
+def get_beamng_export_paths():
+    locations = [os.path.join(get_user_documents_dir(), BEAMNG_MOD_PATH)]
+    latest_shortcut_path = os.path.join(get_user_appdata_local(), BEAMNG_LATEST_VERSION_SHORTCUT)
+    if os.path.exists(latest_shortcut_path):
+        import sim_racing_tools.utils as utils
+        locations.insert(0, os.path.join(utils.read_win_shortcut(latest_shortcut_path), 'mods'))
+    return locations
 
 
 class Installation(object):
