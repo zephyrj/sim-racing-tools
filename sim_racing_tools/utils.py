@@ -22,6 +22,8 @@ import os
 import re
 import zipfile
 import decimal
+import locale
+import struct
 
 
 def create_filename_safe_name(in_name):
@@ -58,6 +60,36 @@ def kw_to_bhp(kw):
 def unzip_file(zip_file_path):
     if os.path.isfile(zip_file_path):
         with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
-            zip_ref.extractall(os.path.dirname(zip_file_path))
+            zip_ref.extractall(os.path.join(os.path.dirname(zip_file_path),
+                                            os.path.basename(zip_file_path)[0:-4]))
     else:
         raise IOError(f"No such file: {zip_file_path}")
+
+
+# https://gist.github.com/Winand/997ed38269e899eb561991a0c663fa49
+def read_win_shortcut(path):
+    # http://stackoverflow.com/a/28952464/1119602
+    with open(path, 'rb') as stream:
+        content = stream.read()
+        # skip first 20 bytes (HeaderSize and LinkCLSID)
+        # read the LinkFlags structure (4 bytes)
+        lflags = struct.unpack('I', content[0x14:0x18])[0]
+        position = 0x18
+        # if the HasLinkTargetIDList bit is set then skip the stored IDList
+        # structure and header
+        if (lflags & 0x01) == 1:
+            position = struct.unpack('H', content[0x4C:0x4E])[0] + 0x4E
+        last_pos = position
+        position += 0x04
+        # get how long the file information is (LinkInfoSize)
+        length = struct.unpack('I', content[last_pos:position])[0]
+        # skip 12 bytes (LinkInfoHeaderSize, LinkInfoFlags and VolumeIDOffset)
+        position += 0x0C
+        # go to the LocalBasePath position
+        lbpos = struct.unpack('I', content[position:position + 0x04])[0]
+        position = last_pos + lbpos
+        # read the string at the given position of the determined length
+        size = (length + last_pos) - position - 0x02
+        content = content[position:position + size].split(b'\x00', 1)
+        return content[-1].decode('utf-16' if len(content) > 1
+                                  else locale.getdefaultlocale()[1])

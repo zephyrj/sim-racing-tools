@@ -19,7 +19,8 @@ ac-tools swap-automation-engine <name-of-ac-car-folder> <name-of-beamng-mod-fold
 The tool assumes:
 - the Assetto Corsa car you are transferring the engine data to resides within the standard Assetto Corsa installation directory 
 - the AC car has its data.acd file unpacked into a data folder
-- the BeamNG mod that you wish to export the engine from resides within the standard BeamNG mod folder - if you don't have BeamNG installed then you will need to create this folder `Documents/BeamNG.drive/mods`.
+- the BeamNG mod that you wish to export the engine from resides within the standard BeamNG mod folder or in `Documents/BeamNG.drive/mods` - if you don't have BeamNG installed then you will need to create this folder.
+  > Note that `Documents` refers to the library set up by Windows. In an explorer window this will be in your Quick Access bar
 ### Example
 ```commandline
 ac-tools swap-automation-engine tatuusfa1 myBeamNGMod
