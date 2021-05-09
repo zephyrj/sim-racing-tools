@@ -75,12 +75,17 @@ POWER_CURVE="power.lut"
 Points to a file within the cars' data directory that provides a mapping between engine rpm and torque generated at the wheels at that rpm when the engine is naturally aspirated. `rpm|torque(Nm)`
 ### v1
 For naturally aspirated engines this is a simple mapping from the torque curve stored within the sandbox.db file with the assumption that drivetrain is 85% efficient i.e.
-`rpm|torque@rpm*0.85`
+`rpm|torque@rpm * drive-type-efficiency`
 For turbocharged engines the mapping takes into account that the torque curve in the sandbox.db will include torque made with turbo pressure so this will be adjusted based upon the boost-curve that is also stored within the sandbox.db. The values used will be
-`rpm|(torque@rpm / (1+boost@rpm)) * 0.85`
-
+`rpm|(torque@rpm / (1+boost@rpm)) * drive-type-efficiency`
+where:
+```
+AWD efficiency = 0.75
+RWD efficiency = 0.85 
+FWD efficiency = 0.9
+```
 ## Future work
-85% mechanical efficiency is currently hard-coded into the calculation - it would be preferable for this to be a variable that could be set. This variable could then be based on the drivetrain configuration (75% - AWD, 85% - RWD, 90% - FWD)
+Allow this to be a variable that could be set through some config 
 
 ## Turbo sections
 ### v1
