@@ -76,7 +76,7 @@ Points to a file within the cars' data directory that provides a mapping between
 ### v1
 For naturally aspirated engines this is a simple mapping from the torque curve stored within the sandbox.db file with the assumption that drivetrain is 85% efficient i.e.
 `rpm|torque@rpm * drive-type-efficiency`
-For turbocharged engines the mapping takes into account that the torque curve in the sandbox.db will include torque made with turbo pressure so this will be adjusted based upon the boost-curve that is also stored within the sandbox.db. The values used will be
+For turbocharged engines the mapping takes into account that the torque curve in the sandbox.db will include torque made with turbo pressure so this will be adjusted based upon the BoostCurve that is also stored within the sandbox.db. The values used will be
 `rpm|(torque@rpm / (1+boost@rpm)) * drive-type-efficiency`
 where:
 ```
@@ -110,7 +110,7 @@ DISPLAY_MAX_BOOST is set to MAX_BOOST and rounded up to 1 decimal place
 REFERENCE_RPM is set using the value of PeakBoostRPM in the sandbox.db and 600rpm is subtracted
 COCKPIT_ADJUSTABLE is always set to 0
 
-A ctrl_turbo0.ini file is then created to match the boost-curve generated in the sandbox.db file.
+A ctrl_turbo0.ini file is then created to match the BoostCurve generated in the sandbox.db file.
 ```ini
 [CONTROLLER_0]
 INPUT=RPMS
@@ -149,7 +149,7 @@ To calculate a value for the AC base physics fuel consumption constant we start 
 `Fuel Use (l/h) = (Engine Power (kW) * BSFC@Power) / Fuel density kg/m3`and substitute in `fuel_use_per_sec = (("PeakPower" * "Econ") / 750) / 36000`. We then substitute this value into the equation AC uses for fuel consumption `fuel_use_per_sec = ("PeakPowerRPM"*1*C) / 1000` - giving us the equation:
 `CONSUMPTION = (fuel_use_per_sec * 1000) / "PeakPowerRPM"`
 
-If the tool is allowed to use CSP extended physics then max_flow.lut is populated by starting with the equation `Fuel consumption (g/s) = BSFC (g/j) * Power (watts)` and plugging in the values `consumption (g/s) = (econ-curve@rpm/3600000) * (power-curve@rpm*1000)"` then taking that value and converting it to litres per hour by multiplying by 3.6
+If the tool is allowed to use CSP extended physics then max_flow.lut is populated by starting with the equation `Fuel consumption (g/s) = BSFC (g/j) * Power (watts)` and plugging in the values `consumption (g/s) = (EconCurve@rpm/3600000) * (PowerCurve@rpm*1000)"` then taking that value and converting it to litres per hour by multiplying by 3.6
 
 ## Coast Curve
 ```ini
