@@ -1,0 +1,14 @@
+[Capacity]
+max = 2.001
+
+[Cat]
+equals = "CatConvert_None_Name"
+
+[QualityBottomEnd]
+min = 0
+
+[BlockMaterial]
+not = "EngBlock_Mg_Name"
+
+[MTTF]
+min = 50
