@@ -29,7 +29,8 @@ setuptools.setup(
                       "pywin32"],
     scripts=[],
     entry_points={
-        'console_scripts': ['ac-tools=sim_racing_tools.assetto_corsa.scripts.ac_tools:main'],
+        'console_scripts': ['ac-tools=sim_racing_tools.assetto_corsa.scripts.ac_tools:main',
+                            'check-engine=sim_racing_tools.automation.scripts.check_engine:main'],
     },
     classifiers=[
         "Programming Language :: Python :: 3",

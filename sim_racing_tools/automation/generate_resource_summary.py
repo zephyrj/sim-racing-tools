@@ -118,6 +118,16 @@ def get_engine_graph_data(variant_uid):
         return data_dict
 
 
+def get_trim_graph_data(trim_uid):
+    with sqlite3.connect(installation.get_sandbox_db_path()) as conn:
+        conn.row_factory = sqlite3.Row
+        conn.text_factory = bytes
+        cur = conn.cursor()
+        data = cur.execute('SELECT * from TrimGraphData where uid = ?', (trim_uid,)).fetchone()
+        graph_data = _decode_blob(data["GraphData"])
+    return graph_data
+
+
 def write_engine_performance_summary(variant_uid, out_file):
     engine_graph_data = get_engine_graph_data(variant_uid)
     with open(out_file, "w+") as f:

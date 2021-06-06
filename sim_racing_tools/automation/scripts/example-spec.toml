@@ -1,0 +1,20 @@
+[Capacity]
+max = 3.001
+
+[Cat]
+equals = "CatConvert_None_Name"
+
+[QualityBottomEnd]
+min = 0
+
+[BlockMaterial]
+not = "EngBlock_Mg_Name"
+
+[MTTF]
+min = 50
+
+[BlockConfig]
+one_of = ["EngBlock_Inl6_Name", "EngBlock_V6_v90_Name"]
+
+[Pistons]
+not = ["Piston_LightForged_Name", "Piston_Forged_Name"]

@@ -63,10 +63,10 @@ class EngineUIData(object):
     @staticmethod
     def from_dict(data_dict):
         e = EngineUIData()
-        if "torque-curve" in data_dict:
-            e.torque_curve = data_dict["torque-curve"]
-        if "power-curve" in data_dict:
-            e.power_curve = data_dict["power-curve"]
+        if "TorqueCurve" in data_dict:
+            e.torque_curve = data_dict["TorqueCurve"]
+        if "PowerCurve" in data_dict:
+            e.power_curve = data_dict["PowerCurve"]
         if "max-torque" in data_dict:
             e.max_torque = data_dict["max-torque"]
         if "max-power" in data_dict:
@@ -80,8 +80,8 @@ class EngineUIData(object):
         self.max_power = "---"
 
     def to_dict(self):
-        return {"torque-curve": self.torque_curve,
-                "power-curve": self.power_curve,
+        return {"TorqueCurve": self.torque_curve,
+                "PowerCurve": self.power_curve,
                 "max-torque": self.max_torque,
                 "max-power": self.max_power}
 

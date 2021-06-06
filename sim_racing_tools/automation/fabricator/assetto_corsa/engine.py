@@ -120,11 +120,11 @@ def set_metadata(engine_object, engine_db_data):
 
 def set_ui_data(engine_object, engine_db_data):
     ui_data = ac_engine.EngineUIData()
-    ui_data.torque_curve = [[str(round(rpm)), str(round(engine_db_data["torque-curve"][idx]))]
-                            for idx, rpm in enumerate(engine_db_data["rpm-curve"])]
+    ui_data.torque_curve = [[str(round(rpm)), str(round(engine_db_data["TorqueCurve"][idx]))]
+                            for idx, rpm in enumerate(engine_db_data["RPMCurve"])]
     ui_data.max_torque = f"{round(engine_db_data['PeakTorque'])}Nm"
-    ui_data.power_curve = [[str(round(rpm)), str(round(utils.kw_to_bhp(engine_db_data["power-curve"][idx])))]
-                           for idx, rpm in enumerate(engine_db_data["rpm-curve"])]
+    ui_data.power_curve = [[str(round(rpm)), str(round(utils.kw_to_bhp(engine_db_data["PowerCurve"][idx])))]
+                           for idx, rpm in enumerate(engine_db_data["RPMCurve"])]
     ui_data.max_power = f"{round(utils.kw_to_bhp(engine_db_data['PeakPower']))}bhp"
     engine_object.metadata.ui_data = ui_data
 
@@ -134,7 +134,7 @@ def get_inertia_v1(jbeam_engine_data):
 
 
 def get_idle_speed_v1(engine_db_data):
-    return round(max(engine_db_data["IdleSpeed"], engine_db_data["rpm-curve"][0]))
+    return round(max(engine_db_data["IdleSpeed"], engine_db_data["RPMCurve"][0]))
 
 
 def get_limiter_v1(engine_db_data):
@@ -175,14 +175,14 @@ def get_extended_fuel_consumption_v1(engine_db_data, mechanical_efficiency):
     # BSFC = fuel_consumption (g/s) / power (watts)
     # fuel_consumption (g/s) = BSFC * power (watts)
     # Get 65th percentile because under race conditions we will tend to be in the upper rev range
-    rpm_index = get_percentile_index(engine_db_data["rpm-curve"], 65)
-    fuel_use_grams_per_sec = ((engine_db_data['econ-curve'][rpm_index]/3600000) *
-                              (engine_db_data['power-curve'][rpm_index] * 1000))
+    rpm_index = get_percentile_index(engine_db_data["RPMCurve"], 65)
+    fuel_use_grams_per_sec = ((engine_db_data['EconCurve'][rpm_index]/3600000) *
+                              (engine_db_data['PowerCurve'][rpm_index] * 1000))
     data.max_fuel_flow = round(fuel_use_grams_per_sec * 3.6)
     data.max_fuel_flow_lut = dict()
-    for rpm_index, rpm in enumerate(engine_db_data["rpm-curve"]):
-        fuel_use_grams_per_sec = ((engine_db_data['econ-curve'][rpm_index]/3600000) *
-                                  (engine_db_data['power-curve'][rpm_index] * 1000))
+    for rpm_index, rpm in enumerate(engine_db_data["RPMCurve"]):
+        fuel_use_grams_per_sec = ((engine_db_data['EconCurve'][rpm_index]/3600000) *
+                                  (engine_db_data['PowerCurve'][rpm_index] * 1000))
         data.max_fuel_flow_lut[int(rpm)] = round(fuel_use_grams_per_sec * 3.6)
     return data
 
@@ -193,13 +193,13 @@ def set_power_info_v1(engine_object, engine_db_data, mechanical_efficiency):
     else:
         write_turbo_torque_curve(engine_object, engine_db_data, mechanical_efficiency)
         create_turbo_sections_v1(engine_object, engine_db_data)
-        engine_object.metadata.boost_curve = {round(rpm): engine_db_data["boost-curve"][idx]
-                                              for idx, rpm in enumerate(engine_db_data["rpm-curve"])}
+        engine_object.metadata.boost_curve = {round(rpm): engine_db_data["BoostCurve"][idx]
+                                              for idx, rpm in enumerate(engine_db_data["RPMCurve"])}
 
-    rpm_increments = engine_db_data["rpm-curve"][-1] - engine_db_data["rpm-curve"][-2]
-    engine_object.power_info.rpm_curve.append(round(engine_db_data["rpm-curve"][-1] + rpm_increments))
+    rpm_increments = engine_db_data["RPMCurve"][-1] - engine_db_data["RPMCurve"][-2]
+    engine_object.power_info.rpm_curve.append(round(engine_db_data["RPMCurve"][-1] + rpm_increments))
     engine_object.power_info.torque_curve.append(round(engine_object.power_info.torque_curve[-1] / 2))
-    engine_object.power_info.rpm_curve.append(round(engine_db_data["rpm-curve"][-1] + (rpm_increments * 2)))
+    engine_object.power_info.rpm_curve.append(round(engine_db_data["RPMCurve"][-1] + (rpm_increments * 2)))
     engine_object.power_info.torque_curve.append(0)
 
 
@@ -244,16 +244,16 @@ def calculate_pumping_losses(engine_db_data):
 
 
 def write_na_torque_curve(engine, engine_data, mechanical_efficiency):
-    for idx in range(0, len(engine_data["rpm-curve"])):
-        engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][idx]))
-        engine.power_info.torque_curve.append(round(engine_data["torque-curve"][idx] * mechanical_efficiency))
+    for idx in range(0, len(engine_data["RPMCurve"])):
+        engine.power_info.rpm_curve.append(round(engine_data["RPMCurve"][idx]))
+        engine.power_info.torque_curve.append(round(engine_data["TorqueCurve"][idx] * mechanical_efficiency))
 
 
 def write_turbo_torque_curve(engine, engine_data, mechanical_efficiency):
-    for idx in range(0, len(engine_data["rpm-curve"])):
-        engine.power_info.rpm_curve.append(round(engine_data["rpm-curve"][idx]))
-        boost_pressure = max(0, engine_data["boost-curve"][idx])
-        engine.power_info.torque_curve.append(round((engine_data["torque-curve"][idx] /
+    for idx in range(0, len(engine_data["RPMCurve"])):
+        engine.power_info.rpm_curve.append(round(engine_data["RPMCurve"][idx]))
+        boost_pressure = max(0, engine_data["BoostCurve"][idx])
+        engine.power_info.torque_curve.append(round((engine_data["TorqueCurve"][idx] /
                                                      (1+boost_pressure)) * mechanical_efficiency))
 
 
@@ -269,8 +269,8 @@ def create_turbo_sections_v1(engine, engine_data):
     t.lag_up = 0.965
     t.gamma = 2.5
     c = ac_engine.TurboController(0)
-    for idx, rpm in enumerate(engine_data["rpm-curve"]):
-        c.lut[round(rpm)] = max(0.0, round(engine_data["boost-curve"][idx], 2))
+    for idx, rpm in enumerate(engine_data["RPMCurve"]):
+        c.lut[round(rpm)] = max(0.0, round(engine_data["BoostCurve"][idx], 2))
     t.controllers.controllers.append(c)
     engine.turbo.sections.append(t)
 

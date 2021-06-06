@@ -27,6 +27,7 @@ if sys.platform == "win32":
 import sys
 import os
 import sim_racing_tools.constants as constants
+import sim_racing_tools.utils as utils
 
 GAME_NAME = "Automation"
 GAME_ID = 293760
@@ -77,8 +78,25 @@ def get_beamng_export_paths():
     return locations
 
 
+def get_exported_car_data_dir(beamng_mod_folder_name):
+    found_path = None
+    for mod_location in get_beamng_export_paths():
+        potential_path = os.path.join(mod_location, beamng_mod_folder_name)
+        if os.path.isdir(potential_path):
+            found_path = potential_path
+            break
+        zip_filename = os.path.join(os.path.dirname(potential_path), os.path.basename(potential_path) + ".zip")
+        if os.path.exists(zip_filename):
+            utils.unzip_file(zip_filename)
+            found_path = potential_path
+            break
+
+    if not found_path:
+        raise ValueError(f"Can't find {beamng_mod_folder_name} in {','.join(get_beamng_export_paths())}")
+    return os.path.join(found_path, os.sep.join(["vehicles", beamng_mod_folder_name]))
+
+
 class Installation(object):
     def __init__(self, custom_root=None):
         self.on_linux = sys.platform == "linux" or sys.platform == "linux2"
         self.installation_root = get_install_dir() if not custom_root else custom_root
-
