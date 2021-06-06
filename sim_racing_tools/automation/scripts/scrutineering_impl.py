@@ -53,6 +53,8 @@ def validate_engine(args):
             uid = car.get_data()['Car']['Variant']['UID']
     elif args.variant_uid:
         uid = args.variant_uid
+    elif args.name:
+        uid = sandbox.get_engine_uid_from_name(args.name[0], args.name[1])
     else:
         print("No method for getting Variant UID provided")
         return ARGUMENT_ERROR
@@ -79,10 +81,18 @@ def validate_engine(args):
                       f"is more than configured max of {spec_data[key]['max']}")
                 return FAILURE
         if "not" in spec_data[key]:
-            if engine_db_data[key] == spec_data[key]["not"]:
-                print(f"Engine doesn't meet specifications: {key} ({engine_db_data[key]}) "
-                      f"is equal to {spec_data[key]['not']}")
-                return FAILURE
+            try:
+                iterator = iter(spec_data[key]["not"])
+            except TypeError:
+                if engine_db_data[key] == spec_data[key]["not"]:
+                    print(f"Engine doesn't meet specifications: {key} ({engine_db_data[key]}) "
+                          f"is equal to {spec_data[key]['not']}")
+                    return FAILURE
+            else:
+                if engine_db_data[key] in spec_data[key]["not"]:
+                    print(f"Engine doesn't meet specifications: {key} ({engine_db_data[key]}) "
+                          f"is equal to {spec_data[key]['not']}")
+                    return FAILURE
         if "equals" in spec_data[key]:
             if engine_db_data[key] != spec_data[key]["equals"]:
                 print(f"Engine doesn't meet specifications: {key} ({engine_db_data[key]}) "
@@ -91,7 +101,7 @@ def validate_engine(args):
         if "one_of" in spec_data[key]:
             if engine_db_data[key] not in spec_data[key]["one_of"]:
                 print(f"Engine doesn't meet specifications: {key} ({engine_db_data[key]}) "
-                      f"is not one of {', '.join(spec_data[key]['not'])}")
+                      f"is not one of {', '.join(spec_data[key]['one_of'])}")
                 return FAILURE
     print(f"Engine meets specifications")
     return SUCCESS

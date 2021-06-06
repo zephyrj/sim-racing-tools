@@ -129,6 +129,21 @@ def get_engine_data(variant_uid):
     return data_dict
 
 
+def get_engine_uid_from_name(family_name, variant_name):
+    with sqlite3.connect(os.path.join(installation.get_userdata_path(),
+                                      installation.SANDBOX_DB_NAME)) as conn:
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        family_row = cur.execute('SELECT * from Families where Name = ?',
+                                 (family_name,)).fetchone()
+        query = f"SELECT UID from Variants where FUID = ? and Name = ?"
+        return cur.execute(query, (family_row['UID'], variant_name)).fetchone()["UID"]
+
+
+def get_engine_by_name(family_name, variant_name):
+    return get_engine_data(get_engine_uid_from_name(family_name, variant_name))
+
+
 def _decode_double(blob_bytes):
     logging.debug(" ".join(f'{b:02X}' for b in blob_bytes))
     return struct.unpack("d", bytearray(blob_bytes))[0]

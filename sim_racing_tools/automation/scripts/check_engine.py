@@ -27,6 +27,9 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Tool to validate that an engine meets a set of criteria')
 engine_source_group = parser.add_mutually_exclusive_group(required=True)
+engine_source_group.add_argument("-n", "--name", type=str, nargs=2,
+                                 help="The name of the engine as '<family-name>' '<variant-name>'. Note that each name "
+                                      "must be quoted and there should be a space between the two names")
 engine_source_group.add_argument('-u', "--variant-uid", type=str, help="The uid of the variant to check")
 engine_source_group.add_argument('-c', "--exported-car-path", type=str,
                                  help="A path to an exported car - the engine of the car will be checked. "
