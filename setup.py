@@ -9,6 +9,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="sim-racing-tools",
+    keywords=["Assetto Corsa", "Automation", "Sim Racing"],
     version=version['__version__'],
     author="zephyrj",
     author_email="zephyrj@protonmail.com",
@@ -16,7 +17,12 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/zephyrj/sim-racing-tools",
+    download_url="https://github.com/zephyrj/sim-racing-tools/archive/refs/tags/2021.6.1.tar.gz",
+    project_urls={
+        "Bug Tracker": "https://github.com/zephyrj/sim-racing-tools/issues",
+    },
     packages=setuptools.find_packages('.'),
+    python_requires=">=3.6",
     include_package_data=True,
     install_requires=["setuptools~=54.2.0",
                       "wheel~=0.36.2",
@@ -34,7 +40,8 @@ setuptools.setup(
     },
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: GNU General Public License v3.0",
+        "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Operating System :: OS Independent",
     ]
 )
