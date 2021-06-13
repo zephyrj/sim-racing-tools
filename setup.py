@@ -17,7 +17,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/zephyrj/sim-racing-tools",
-    download_url="https://github.com/zephyrj/sim-racing-tools/archive/refs/tags/2021.6.1.tar.gz",
+    download_url="https://github.com/zephyrj/sim-racing-tools/archive/refs/tags/2021.6.2.tar.gz",
     project_urls={
         "Bug Tracker": "https://github.com/zephyrj/sim-racing-tools/issues",
     },
