@@ -110,6 +110,20 @@ def get_engine_data_params():
     return params
 
 
+def get_all_engines_data():
+    with sqlite3.connect(os.path.join(installation.get_userdata_path(),
+                                      installation.SANDBOX_DB_NAME)) as conn:
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        variant_columns = get_variant_data_params()
+        query = f"SELECT {', '.join(variant_columns)} from Variants"
+        engine_rows = cur.execute(query).fetchall()
+        engine_data_list = list()
+        for row in engine_rows:
+            engine_data_list.append(_create_engine_data_for_row(cur, row))
+        return engine_data_list
+
+
 def get_engine_data(variant_uid):
     with sqlite3.connect(os.path.join(installation.get_userdata_path(),
                                       installation.SANDBOX_DB_NAME)) as conn:
@@ -118,15 +132,7 @@ def get_engine_data(variant_uid):
         variant_columns = get_variant_data_params()
         query = f"SELECT {', '.join(variant_columns)} from Variants where uid = ?"
         row = cur.execute(query, (variant_uid,)).fetchone()
-        data_dict = {k: row[k] for k in row.keys()}
-        family_row = cur.execute('SELECT * from Families where uid = ?',
-                                 (data_dict['FUID'],)).fetchone()
-        for family_key, data_key in get_family_mapping().items():
-            data_dict[data_key] = family_row[family_key]
-        data_dict.update(get_engine_performance_data(variant_uid))
-        data_dict.update(get_engine_bill_of_materials(variant_uid))
-        data_dict.update(get_engine_graph_data(variant_uid))
-    return data_dict
+        return _create_engine_data_for_row(cur, row)
 
 
 def get_engine_uid_from_name(family_name, variant_name):
@@ -142,6 +148,17 @@ def get_engine_uid_from_name(family_name, variant_name):
 
 def get_engine_by_name(family_name, variant_name):
     return get_engine_data(get_engine_uid_from_name(family_name, variant_name))
+
+
+def _create_engine_data_for_row(sql_cursor, engine_row):
+    data_dict = {k: engine_row[k] for k in engine_row.keys()}
+    family_row = sql_cursor.execute('SELECT * from Families where uid = ?', (data_dict['FUID'],)).fetchone()
+    for family_key, data_key in get_family_mapping().items():
+        data_dict[data_key] = family_row[family_key]
+    data_dict.update(get_engine_performance_data(data_dict["UID"]))
+    data_dict.update(get_engine_bill_of_materials(data_dict["UID"]))
+    data_dict.update(get_engine_graph_data(data_dict["UID"]))
+    return data_dict
 
 
 def _decode_double(blob_bytes):
@@ -168,3 +185,5 @@ def _decode_blob(blob_bytes):
         current_pos += 8
         collected_points += 1
     return out_list
+
+

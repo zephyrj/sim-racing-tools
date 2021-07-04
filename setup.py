@@ -29,6 +29,7 @@ setuptools.setup(
                       "six~=1.15.0",
                       "configobj~=5.0.6",
                       "argcomplete~=1.12.3",
+                      "falcon~=3.0.1",
                       "pandas~=1.2.4",
                       "plotly~=4.14.3",
                       "pywin32"],
