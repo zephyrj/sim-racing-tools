@@ -1,3 +1,6 @@
+> There is an easier to use GUI version of the engine swap functionality in a new repository: https://github.com/zephyrj/engine-crane 
+----
+
 # sim-racing-tools
 A collection of python tools to make sim-racing more fun. All a work in-progress based on things I've 
 been playing around with. Feel free to contribute with any ideas or suggestions and let me know if you find any
